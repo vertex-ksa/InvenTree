@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: inventree\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-09-27 21:10+0000\n"
-"PO-Revision-Date: 2026-09-27 21:15\n"
+"PO-Revision-Date: 2026-09-28 03:12\n"
 "Last-Translator: \n"
 "Language-Team: German\n"
 "Language: de_DE\n"
@@ -392,7 +392,7 @@ msgstr ""
 
 #: InvenTree/serializers.py:1111
 msgid "Copy Lines"
-msgstr ""
+msgstr "Zeilen kopieren"
 
 #: InvenTree/serializers.py:1111
 msgid "Copy line items from the original order"
@@ -416,7 +416,7 @@ msgstr ""
 
 #: InvenTree/serializers.py:1178
 msgid "Original"
-msgstr ""
+msgstr "Original"
 
 #: InvenTree/serializers.py:1179
 msgid "Select instance to duplicate"
@@ -432,7 +432,7 @@ msgstr "Bulgarisch"
 
 #: InvenTree/setting/locales.py:22
 msgid "Catalan"
-msgstr ""
+msgstr "Katalanisch"
 
 #: InvenTree/setting/locales.py:23
 msgid "Czech"
@@ -1660,7 +1660,7 @@ msgstr ""
 
 #: common/api.py:1814
 msgid "Provider"
-msgstr ""
+msgstr "Anbieter"
 
 #: common/api.py:1818
 msgid "Human friendly name for the application - will be displayed to users"
@@ -1676,7 +1676,7 @@ msgstr ""
 
 #: common/api.py:1853
 msgid "Provider is not supported"
-msgstr ""
+msgstr "Anbieter wird nicht unterstützt"
 
 #: common/api.py:1865
 msgid "A SocialApp with this provider already exists"
@@ -1712,7 +1712,7 @@ msgstr "Kein Plugin"
 
 #: common/filters.py:110
 msgid "Tags"
-msgstr ""
+msgstr "Schlagwörter"
 
 #: common/filters.py:409
 msgid "Project Code Label"
@@ -1985,11 +1985,11 @@ msgstr ""
 
 #: common/models.py:2071
 msgid "Filename cannot be empty"
-msgstr ""
+msgstr "Dateiname darf nicht leer sein"
 
 #: common/models.py:2076 common/models.py:2096
 msgid "Invalid filename"
-msgstr ""
+msgstr "Ungültiger Dateiname"
 
 #: common/models.py:2082
 msgid "Cannot change file extension"
@@ -2041,7 +2041,7 @@ msgstr "Datum der hochgeladenen Datei"
 
 #: common/models.py:2176
 msgid "Is image"
-msgstr ""
+msgstr "Ist Bild"
 
 #: common/models.py:2177
 msgid "True if this attachment is a valid image file"
@@ -2114,7 +2114,7 @@ msgstr "Farbe, die im Frontend angezeigt wird"
 
 #: common/models.py:2356
 msgid "Model"
-msgstr ""
+msgstr "Modell"
 
 #: common/models.py:2357
 msgid "Model this state is associated with"
@@ -2122,7 +2122,7 @@ msgstr ""
 
 #: common/models.py:2372
 msgid "Model must be selected"
-msgstr ""
+msgstr "Modell muss ausgewählt sein"
 
 #: common/models.py:2375
 msgid "Key must be selected"
@@ -2254,7 +2254,7 @@ msgstr "Parameter Vorlage"
 
 #: common/models.py:2645
 msgid "Parameter Templates"
-msgstr ""
+msgstr "Parametervorlagen"
 
 #: common/models.py:2666
 msgid "No uniqueness required"
@@ -2343,11 +2343,11 @@ msgstr ""
 
 #: common/models.py:2860
 msgid "Parameter"
-msgstr ""
+msgstr "Parameter"
 
 #: common/models.py:2861
 msgid "Parameters"
-msgstr ""
+msgstr "Parameter"
 
 #: common/models.py:2907
 msgid "Invalid choice for parameter value"
@@ -2419,7 +2419,7 @@ msgstr ""
 
 #: common/models.py:3385 company/models.py:793
 msgid "Primary"
-msgstr ""
+msgstr "Primär"
 
 #: common/models.py:3386
 msgid "Is this the primary note for the associated model?"
@@ -2431,11 +2431,11 @@ msgstr ""
 
 #: common/models.py:3397
 msgid "Optional description field"
-msgstr ""
+msgstr "Optionales Beschreibungsfeld"
 
 #: common/models.py:3402
 msgid "Content"
-msgstr ""
+msgstr "Inhalt"
 
 #: common/models.py:3403
 msgid "Note content"
@@ -2504,11 +2504,11 @@ msgstr ""
 
 #: common/models.py:3659
 msgid "Email Message"
-msgstr ""
+msgstr "E-Mail-Nachricht"
 
 #: common/models.py:3660
 msgid "Email Messages"
-msgstr ""
+msgstr "E-Mail-Nachrichten"
 
 #: common/models.py:3667
 msgid "Announced"
@@ -2580,7 +2580,7 @@ msgstr ""
 
 #: common/models.py:3747
 msgid "Priority"
-msgstr ""
+msgstr "Priorität"
 
 #: common/models.py:3789
 msgid "Email Thread"
@@ -2605,7 +2605,7 @@ msgstr ""
 
 #: common/models.py:3815
 msgid "Started Internal"
-msgstr ""
+msgstr "Intern gestartet"
 
 #: common/models.py:3816
 msgid "Was this thread started internally?"
@@ -2667,7 +2667,7 @@ msgstr ""
 
 #: common/serializers.py:186 plugin/serializers.py:293
 msgid "Override"
-msgstr ""
+msgstr "Überschreiben"
 
 #: common/serializers.py:656
 msgid "Is Running"
@@ -4033,31 +4033,31 @@ msgstr ""
 
 #: common/setting/system.py:1320
 msgid "Sunday"
-msgstr ""
+msgstr "Sonntag"
 
 #: common/setting/system.py:1321
 msgid "Monday"
-msgstr ""
+msgstr "Montag"
 
 #: common/setting/system.py:1322
 msgid "Tuesday"
-msgstr ""
+msgstr "Dienstag"
 
 #: common/setting/system.py:1323
 msgid "Wednesday"
-msgstr ""
+msgstr "Mittwoch"
 
 #: common/setting/system.py:1324
 msgid "Thursday"
-msgstr ""
+msgstr "Donnerstag"
 
 #: common/setting/system.py:1325
 msgid "Friday"
-msgstr ""
+msgstr "Freitag"
 
 #: common/setting/system.py:1326
 msgid "Saturday"
-msgstr ""
+msgstr "Samstag"
 
 #: common/setting/system.py:1330
 msgid "Calendar Horizon"
@@ -4069,7 +4069,7 @@ msgstr ""
 
 #: common/setting/system.py:1336
 msgid "months"
-msgstr ""
+msgstr "Monate"
 
 #: common/setting/system.py:1339
 msgid "Enable Test Station Data"
@@ -4465,7 +4465,7 @@ msgstr ""
 
 #: common/validators.py:60
 msgid "Invalid content type"
-msgstr ""
+msgstr "Ungültiger Inhaltstyp"
 
 #: common/validators.py:63
 msgid "Model type does not support notes"
@@ -4473,7 +4473,7 @@ msgstr ""
 
 #: common/validators.py:82
 msgid "All models"
-msgstr ""
+msgstr "Alle Modelle"
 
 #: common/validators.py:102
 msgid "No attachment model type provided"
@@ -4490,7 +4490,7 @@ msgstr ""
 
 #: common/validators.py:130
 msgid "Invalid file name"
-msgstr ""
+msgstr "Ungültiger Dateiname"
 
 #: common/validators.py:142
 msgid "Minimum places cannot be greater than maximum places"
@@ -4922,7 +4922,7 @@ msgstr ""
 
 #: generic/states/serializers.py:37
 msgid "Class"
-msgstr ""
+msgstr "Klasse"
 
 #: generic/states/serializers.py:40
 msgid "Values"
@@ -5215,7 +5215,7 @@ msgstr "Verbindung getrennt"
 
 #: machine/machine_types/label_printer.py:242
 msgid "Error"
-msgstr ""
+msgstr "Fehler"
 
 #: machine/machine_types/label_printer.py:249
 msgid "Label Printer"
@@ -5303,7 +5303,7 @@ msgstr ""
 
 #: machine/serializers.py:33
 msgid "Type"
-msgstr ""
+msgstr "Typ"
 
 #: machine/serializers.py:35
 msgid "Type of the property"
@@ -5335,11 +5335,11 @@ msgstr "Erstellt von"
 
 #: order/api.py:205
 msgid "Created Before"
-msgstr ""
+msgstr "Erstellt bevor"
 
 #: order/api.py:209
 msgid "Created After"
-msgstr ""
+msgstr "Erstellt nach"
 
 #: order/api.py:213
 msgid "Has Start Date"
@@ -5355,23 +5355,23 @@ msgstr ""
 
 #: order/api.py:229
 msgid "Has Target Date"
-msgstr ""
+msgstr "Hat Zieldatum"
 
 #: order/api.py:237
 msgid "Target Date Before"
-msgstr ""
+msgstr "Zieldatum bevor"
 
 #: order/api.py:241
 msgid "Target Date After"
-msgstr ""
+msgstr "Zieldatum nach"
 
 #: order/api.py:245
 msgid "Updated Before"
-msgstr ""
+msgstr "Aktualisiert bevor"
 
 #: order/api.py:249
 msgid "Updated After"
-msgstr ""
+msgstr "Aktualisiert nach"
 
 #: order/api.py:302
 msgid "Has Pricing"
@@ -5379,11 +5379,11 @@ msgstr "Hat Preise"
 
 #: order/api.py:355 order/api.py:895 order/api.py:1685 order/api.py:2002
 msgid "Completed Before"
-msgstr ""
+msgstr "Abgeschlossen bevor"
 
 #: order/api.py:359 order/api.py:899 order/api.py:1689 order/api.py:2006
 msgid "Completed After"
-msgstr ""
+msgstr "Abgeschlossen nach"
 
 #: order/api.py:365 order/api.py:369
 msgid "External Build Order"
@@ -5702,7 +5702,7 @@ msgstr "Anzahl"
 
 #: order/models.py:2144
 msgid "Discount"
-msgstr ""
+msgstr "Rabatt"
 
 #: order/models.py:2145
 msgid "Discount percentage applied to this line item (0-100)"
@@ -6233,7 +6233,7 @@ msgstr ""
 
 #: order/serializers.py:1247
 msgid "Shipments"
-msgstr ""
+msgstr "Lieferungen"
 
 #: order/serializers.py:1251
 msgid "Completed Shipments"
@@ -6463,15 +6463,15 @@ msgstr "Ergebnisse"
 
 #: part/api.py:672
 msgid "Is Variant"
-msgstr ""
+msgstr "Ist Variante"
 
 #: part/api.py:680
 msgid "Is Revision"
-msgstr ""
+msgstr "Ist Revision"
 
 #: part/api.py:690
 msgid "Has Revisions"
-msgstr ""
+msgstr "Hat Revisionen"
 
 #: part/api.py:897
 msgid "BOM Valid"
@@ -7170,7 +7170,7 @@ msgstr ""
 
 #: part/models.py:4071 part/serializers.py:1717
 msgid "Piece Count"
-msgstr ""
+msgstr "Stückzahl"
 
 #: part/models.py:4073 part/serializers.py:1719
 msgid "Number of pieces required (for cut-to-length items). Total material = quantity x piece_count."
@@ -7262,7 +7262,7 @@ msgstr "Doppelte Beziehung existiert bereits"
 
 #: part/serializers.py:66
 msgid "Delete Subcategories"
-msgstr ""
+msgstr "Unterkategorien löschen"
 
 #: part/serializers.py:67
 msgid "Delete all sub-categories contained within this category"
@@ -7270,7 +7270,7 @@ msgstr ""
 
 #: part/serializers.py:72
 msgid "Delete Parts"
-msgstr ""
+msgstr "Teile löschen"
 
 #: part/serializers.py:73
 msgid "Delete all parts contained within this category"
@@ -7371,7 +7371,7 @@ msgstr "Lagerartikel"
 
 #: part/serializers.py:858
 msgid "Revisions"
-msgstr ""
+msgstr "Revisionen"
 
 #: part/serializers.py:862 part/serializers.py:1185
 #: templates/email/low_stock_notification.html:16
@@ -7513,7 +7513,7 @@ msgstr ""
 
 #: part/serializers.py:1370
 msgid "Generate Report"
-msgstr ""
+msgstr "Bericht generieren"
 
 #: part/serializers.py:1371
 msgid "Generate a stocktake report for the selected parts"
@@ -7653,7 +7653,7 @@ msgstr ""
 #: part/tasks.py:103
 #, python-brace-format
 msgid "{days_until_expiry} days"
-msgstr ""
+msgstr "{days_until_expiry} Tage"
 
 #: plugin/api.py:80
 msgid "Builtin"
@@ -7661,11 +7661,11 @@ msgstr ""
 
 #: plugin/api.py:94
 msgid "Mandatory"
-msgstr ""
+msgstr "Verpflichtend"
 
 #: plugin/api.py:109
 msgid "Sample"
-msgstr ""
+msgstr "Beispiel"
 
 #: plugin/api.py:123 plugin/models.py:167
 msgid "Installed"
@@ -7693,7 +7693,7 @@ msgstr "Treffer für Barcode gefunden"
 
 #: plugin/base/barcodes/api.py:256 plugin/base/barcodes/serializers.py:77
 msgid "Model is not supported"
-msgstr ""
+msgstr "Modell wird nicht unterstützt"
 
 #: plugin/base/barcodes/api.py:261
 msgid "Model instance not found"
@@ -8140,7 +8140,7 @@ msgstr ""
 #: plugin/builtin/exporter/bom_exporter.py:138
 #, python-brace-format
 msgid "Manufacturer {n}"
-msgstr ""
+msgstr "Hersteller {n}"
 
 #: plugin/builtin/exporter/bom_exporter.py:139
 #, python-brace-format
@@ -8281,7 +8281,7 @@ msgstr "Standard-Wechselkursintegration"
 
 #: plugin/builtin/integration/machine_types.py:15
 msgid "InvenTree Machines"
-msgstr ""
+msgstr "InvenTree-Maschinen"
 
 #: plugin/builtin/integration/machine_types.py:16
 msgid "Built-in machine types for InvenTree"
@@ -8597,7 +8597,7 @@ msgstr "Plugin benötigt maximal Version {v}"
 
 #: plugin/samples/integration/sample.py:52
 msgid "User Setting 1"
-msgstr ""
+msgstr "Benutzereinstellung 1"
 
 #: plugin/samples/integration/sample.py:53
 msgid "A user setting that can be changed by the user"
@@ -8605,7 +8605,7 @@ msgstr ""
 
 #: plugin/samples/integration/sample.py:57
 msgid "User Setting 2"
-msgstr ""
+msgstr "Benutzereinstellung 2"
 
 #: plugin/samples/integration/sample.py:58
 msgid "Another user setting"
@@ -8613,11 +8613,11 @@ msgstr ""
 
 #: plugin/samples/integration/sample.py:63
 msgid "User Setting 3"
-msgstr ""
+msgstr "Benutzereinstellung 3"
 
 #: plugin/samples/integration/sample.py:64
 msgid "A user setting with choices"
-msgstr ""
+msgstr "Eine Benutzereinstellung mit Auswahlmöglichkeiten"
 
 #: plugin/samples/integration/sample.py:72
 msgid "Enable PO"
@@ -8725,7 +8725,7 @@ msgstr ""
 
 #: plugin/serializers.py:86
 msgid "Source File"
-msgstr ""
+msgstr "Quelldatei"
 
 #: plugin/serializers.py:87
 msgid "Path to the source file for admin integration"
@@ -8897,7 +8897,7 @@ msgstr ""
 
 #: report/models.py:299
 msgid "Template is enabled"
-msgstr ""
+msgstr "Vorlage ist aktiviert"
 
 #: report/models.py:306
 msgid "Target model type for template"
@@ -8913,7 +8913,7 @@ msgstr ""
 
 #: report/models.py:390 report/models.py:724
 msgid "Template file"
-msgstr ""
+msgstr "Vorlagendatei"
 
 #: report/models.py:398
 msgid "Page size for PDF reports"
@@ -8925,7 +8925,7 @@ msgstr "Bericht in Querformat anzeigen"
 
 #: report/models.py:409
 msgid "Merge"
-msgstr ""
+msgstr "Zusammenführen"
 
 #: report/models.py:410
 msgid "Render a single report against selected items"
@@ -9151,7 +9151,7 @@ msgstr ""
 
 #: report/templatetags/report.py:252
 msgid "Invalid media file path"
-msgstr ""
+msgstr "Ungültiger Mediendateipfad"
 
 #: report/templatetags/report.py:271
 msgid "Invalid static file path"
@@ -9187,7 +9187,7 @@ msgstr ""
 
 #: scim/models.py:27
 msgid "SCIM Configuration"
-msgstr ""
+msgstr "SCIM-Konfiguration"
 
 #: scim/models.py:32
 msgid "Enable the SCIM provisioning endpoint"
@@ -9207,7 +9207,7 @@ msgstr ""
 
 #: scim/models.py:46
 msgid "Last Used"
-msgstr ""
+msgstr "Zuletzt verwendet"
 
 #: stock/api.py:341
 msgid "Filter by location depth"
@@ -9283,11 +9283,11 @@ msgstr "Teile-Baum"
 
 #: stock/api.py:988
 msgid "Updated before"
-msgstr ""
+msgstr "Aktualisiert bevor"
 
 #: stock/api.py:992
 msgid "Updated after"
-msgstr ""
+msgstr "Aktualisiert nach"
 
 #: stock/api.py:996
 msgid "Stocktake Before"
@@ -9368,11 +9368,11 @@ msgstr ""
 
 #: stock/api.py:1637
 msgid "Date after"
-msgstr ""
+msgstr "Datum nach"
 
 #: stock/api.py:1641
 msgid "Date before"
-msgstr ""
+msgstr "Datum bevor"
 
 #: stock/models.py:76
 msgid "Stock Location type"
@@ -10424,7 +10424,7 @@ msgstr "wichtige Daten"
 
 #: users/authentication.py:29
 msgid "Invalid token."
-msgstr ""
+msgstr "Ungültiges Token."
 
 #: users/authentication.py:33
 msgid "User inactive or deleted."
@@ -10480,7 +10480,7 @@ msgstr ""
 
 #: users/models.py:293
 msgid "Revoked By"
-msgstr ""
+msgstr "Widerrufen von"
 
 #: users/models.py:294
 msgid "User who revoked the token"
@@ -10492,7 +10492,7 @@ msgstr ""
 
 #: users/models.py:310
 msgid "Token Version"
-msgstr ""
+msgstr "Token-Version"
 
 #: users/models.py:311
 msgid "Version of the API token"
@@ -10544,7 +10544,7 @@ msgstr "Berechtigung Einträge zu löschen"
 
 #: users/models.py:681
 msgid "Bot"
-msgstr ""
+msgstr "Bot"
 
 #: users/models.py:682
 msgid "Internal"
@@ -10572,7 +10572,7 @@ msgstr ""
 
 #: users/models.py:714
 msgid "Widgets"
-msgstr ""
+msgstr "Widgets"
 
 #: users/models.py:716
 msgid "Settings for the dashboard widgets as JSON - do not edit manually!"
@@ -10588,7 +10588,7 @@ msgstr ""
 
 #: users/models.py:730
 msgid "Position"
-msgstr ""
+msgstr "Position"
 
 #: users/models.py:731
 msgid "Main job title or position"
@@ -10612,7 +10612,7 @@ msgstr ""
 
 #: users/models.py:763
 msgid "User Type"
-msgstr ""
+msgstr "Benutzertyp"
 
 #: users/models.py:764
 msgid "Which type of user is this?"
@@ -10628,7 +10628,7 @@ msgstr ""
 
 #: users/models.py:779
 msgid "Primary Group"
-msgstr ""
+msgstr "Primäre Gruppe"
 
 #: users/models.py:780
 msgid "Primary group for the user"
@@ -10640,7 +10640,7 @@ msgstr "Admin"
 
 #: users/ruleset.py:45
 msgid "Bills of Material"
-msgstr ""
+msgstr "Stücklisten"
 
 #: users/ruleset.py:49
 msgid "Purchase Orders"
@@ -10692,7 +10692,7 @@ msgstr ""
 
 #: users/serializers.py:347
 msgid "Administrator"
-msgstr ""
+msgstr "Administrator"
 
 #: users/serializers.py:348
 msgid "Does this user have administrative permissions"
