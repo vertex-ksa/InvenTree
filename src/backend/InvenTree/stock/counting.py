@@ -60,6 +60,9 @@ def variance(scope, observation, current):
     for field in ('item', 'location', 'quantity', 'tracking'):
         if current[field] != scope[field]:
             raise CountConflictError('Stock changed during count; recount required')
+    for field in ('part', 'partName', 'partIPN', 'partRevision', 'batch', 'unit'):
+        if field in scope and current.get(field) != scope[field]:
+            raise CountConflictError('Stock identity changed; recount required')
     count = quantity_text(observation)
     return {
         'item': scope['item'],

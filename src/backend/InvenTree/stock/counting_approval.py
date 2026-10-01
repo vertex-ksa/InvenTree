@@ -10,8 +10,11 @@ from django.utils import timezone
 from stock.counting import CountConflictError, evidence_hash, variance
 from stock.counting_service import (
     _authorize,
+    _authorize_observer,
     _binding,
+    _lock_parts,
     _ownership,
+    _require_material_scope,
     _snapshot,
     commit_count,
     request_count_review,
@@ -21,12 +24,15 @@ from stock.models import CycleCountApproval, CycleCountSession, StockItem
 
 def _decision_actor(user, permission='approve'):
     current = _authorize(user)
+    current = _authorize(current, 'view')
     if not current.has_perm(f'stock.{permission}_cyclecountapproval'):
         raise PermissionDenied
     return current
 
 
 def _scope(session, user, check_material=True):
+    if check_material:
+        _require_material_scope(session)
     if len(session.observations) != len(session.scope):
         raise CountConflictError('Every frozen item requires an observation')
     items = list(
@@ -37,6 +43,7 @@ def _scope(session, user, check_material=True):
     if len(items) != len(session.scope):
         raise CountConflictError('Frozen stock no longer exists; recount required')
     _ownership(user, session.location, items)
+    _lock_parts(items)
     by_id = {str(item.pk): item for item in items}
     for row in session.scope:
         item = by_id[row['item']]
@@ -84,7 +91,7 @@ def request_native_review(
     command_id,
 ):
     """Persist one explicitly assigned reviewer and server-selected expiry/policy."""
-    user = _authorize(user, 'view', 'change')
+    user = _authorize_observer(user, 'change')
     session = CycleCountSession.objects.select_for_update().get(pk=session_id)
     if session.requester_id != user.pk:
         raise PermissionDenied

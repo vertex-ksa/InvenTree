@@ -18,13 +18,14 @@ from stock.counting_approval import (
     decide_native_review,
     request_native_review,
 )
+from stock.counting_records import observer_record
 from stock.counting_service import (
     commit_count,
     observe_count,
     open_count,
     request_count_review,
 )
-from stock.models import CycleCountApproval, StockItem, StockLocation
+from stock.models import CycleCountApproval, CycleCountSession, StockItem, StockLocation
 from users.models import Owner
 
 
@@ -41,7 +42,7 @@ class NativeCountTests(TestCase):
         self.counter.user_permissions.add(
             *Permission.objects.filter(
                 codename__in=[
-                    'view_stockitem',
+                    'view_cyclecountsession',
                     'add_cyclecountsession',
                     'change_cyclecountsession',
                 ]
@@ -193,7 +194,11 @@ class NativeCountTests(TestCase):
         self.reviewer.save()
         self.reviewer.user_permissions.add(
             *Permission.objects.filter(
-                codename__in=['change_stockitem', 'approve_cyclecountapproval']
+                codename__in=[
+                    'view_stockitem',
+                    'change_stockitem',
+                    'approve_cyclecountapproval',
+                ]
             )
         )
         self._native_review()
@@ -401,6 +406,96 @@ class NativeCountTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.item.refresh_from_db()
         self.assertEqual(self.item.quantity, 10)
+
+    def test_blind_counter_can_count_without_native_stock_read(self):
+        """Dedicated observations work while ordinary stock balances are denied."""
+        self.assertFalse(self.counter.has_perm('stock.view_stockitem'))
+        self._observe()
+        client = APIClient()
+        client.force_authenticate(user=self.counter)
+        response = client.get(reverse('api-stock-detail', kwargs={'pk': self.item.pk}))
+        self.assertEqual(response.status_code, 403)
+        record = observer_record(self.session.pk, self.counter)
+        self.assertEqual(record['items'][0]['observed'], '8.50000')
+        self.assertEqual(
+            set(record), {'sessionId', 'state', 'revision', 'location', 'items'}
+        )
+        self.assertEqual(
+            set(record['items'][0]),
+            {
+                'id',
+                'partId',
+                'partName',
+                'partIPN',
+                'partRevision',
+                'unit',
+                'batch',
+                'observed',
+            },
+        )
+        with self.assertRaises(PermissionDenied):
+            observer_record(self.session.pk, self.reviewer)
+
+    def test_native_approval_part_change_requires_recount(self):
+        """A stock row reassigned to another SKU cannot consume old observations."""
+        self._native_review()
+        self._native_decide()
+        self.item.part = Part.objects.create(name='Different synthetic SKU')
+        self.item.save(add_note=False)
+        with self.assertRaises(CountConflictError):
+            self._native_commit()
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+        self.assertEqual(
+            CycleCountApproval.objects.get(session=self.session).state, 'APPROVED'
+        )
+
+    def test_native_part_identifier_edits_require_recount(self):
+        """Native SKU labels and revision changes invalidate frozen identity."""
+        self._native_review()
+        self._native_decide()
+        for field in ('IPN', 'revision', 'name'):
+            with self.subTest(field=field):
+                original = getattr(self.part, field)
+                setattr(self.part, field, 'Changed synthetic identifier')
+                self.part.save(update_fields=[field])
+                with self.assertRaises(CountConflictError):
+                    self._native_commit()
+                self.item.refresh_from_db()
+                self.assertEqual(self.item.quantity, 10)
+                setattr(self.part, field, original)
+                self.part.save(update_fields=[field])
+
+    def test_native_approval_unit_change_requires_recount(self):
+        """Independent part-unit edits are material even without stock history."""
+        self._native_review()
+        self._native_decide()
+        self.part.units = 'kg'
+        self.part.save(update_fields=['units'])
+        with self.assertRaises(CountConflictError):
+            self._native_commit()
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+
+    def test_native_approval_batch_change_requires_recount(self):
+        """A different physical batch cannot reuse an old frozen count."""
+        self._native_review()
+        self._native_decide()
+        self.item.batch = 'Different synthetic batch'
+        self.item.save(add_note=False)
+        with self.assertRaises(CountConflictError):
+            self._native_commit()
+
+    def test_incomplete_legacy_material_scope_requires_recount(self):
+        """Incomplete old draft evidence is retained rather than reinterpreted."""
+        self._native_review()
+        session = CycleCountSession.objects.get(pk=self.session.pk)
+        session.scope[0].pop('unit')
+        session.save(update_fields=['scope'])
+        with self.assertRaises(CountConflictError):
+            self._native_decide()
+        with self.assertRaises(CountConflictError):
+            observer_record(session.pk, self.counter)
 
     def test_observation_replay_rechecks_item_ownership(self):
         """A lost acknowledgement cannot expose evidence after ownership removal."""
