@@ -69,7 +69,7 @@ def installation_policy():
         if type(config[key]) is not int or config[key] <= 0:
             raise CountPolicyUnavailable
     try:
-        timedelta(seconds=config['expirySeconds'])
+        timezone.now() + timedelta(seconds=config['expirySeconds'])
     except OverflowError as error:
         raise CountPolicyUnavailable from error
     fingerprint = evidence_hash(
@@ -84,12 +84,23 @@ class StrictInput(serializers.Serializer):
     def to_internal_value(self, data):
         """Validate the exact permitted command boundary."""
         if not isinstance(data, Mapping) or set(data) - set(self.fields):
-            raise serializers.ValidationError('Unexpected command fields.')
+            raise serializers.ValidationError(
+                {'non_field_errors': ['Unexpected command fields.']}
+            )
         for key, field in self.fields.items():
+            if isinstance(field, serializers.CharField) and key in data:
+                if not isinstance(data[key], str):
+                    raise serializers.ValidationError(
+                        {'non_field_errors': ['Command text must be strings.']}
+                    )
             if isinstance(field, serializers.IntegerField) and key in data:
                 if type(data[key]) is not int:
                     raise serializers.ValidationError(
-                        'Revision and identifiers must be integers.'
+                        {
+                            'non_field_errors': [
+                                'Revision and identifiers must be integers.'
+                            ]
+                        }
                     )
         return super().to_internal_value(data)
 
