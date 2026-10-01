@@ -109,6 +109,8 @@ function ItemIdentity({ item }: { item: Item | ReviewItem }) {
     <Stack gap={4}>
       <Text fw={600}>{item.partName}</Text>
       <Text size='sm' c='dimmed'>
+        {t`Stock item`}:{' '}
+        <bdi translate='no'>{'id' in item ? item.id : item.item}</bdi> ·{' '}
         {t`SKU`}: <bdi translate='no'>{item.partIPN || '—'}</bdi> ·{' '}
         {t`Revision`}: <bdi translate='no'>{item.partRevision || '—'}</bdi> ·{' '}
         {t`Batch`}: <bdi translate='no'>{item.batch || '—'}</bdi>
@@ -120,6 +122,11 @@ function ItemIdentity({ item }: { item: Item | ReviewItem }) {
 /** A durable native task whose observer surface never requests stock balances. */
 export default function CycleCount() {
   const { id, view } = useParams();
+  const actorId = useUserState((state) => state.user?.pk);
+  return <CountTask key={JSON.stringify([actorId, id, view])} />;
+}
+function CountTask() {
+  const { id, view } = useParams();
   const reviewer = view === 'review';
   const navigate = useNavigate();
   const actorId = useUserState((state) => state.user?.pk);
@@ -127,6 +134,15 @@ export default function CycleCount() {
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [refreshNeeded, setRefreshNeeded] = useState(false);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+  const blocked = busy || refreshNeeded;
   const [activeAction, setActiveAction] = useState<string | number>('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -187,7 +203,8 @@ export default function CycleCount() {
     payload: Record<string, unknown>,
     success: string
   ) {
-    if (busy) return;
+    if (blocked) return;
+
     setBusy(true);
     setActiveAction(
       (payload.decision ??
@@ -204,32 +221,54 @@ export default function CycleCount() {
     }
     try {
       await api.post(path, { ...payload, command_id: commandId });
+      if (!alive.current) return;
+      setRefreshNeeded(true);
       if (payload.item_id) focusNext.current = true;
       if (payload.decision) setReason('');
       setNotice(success);
       setConfirm(false);
       await task.refetch({ throwOnError: true });
+      if (!alive.current) return;
+      setRefreshNeeded(false);
     } catch (exception) {
-      setError(failureMessage(exception));
+      if (alive.current) setError(failureMessage(exception));
     } finally {
-      setBusy(false);
+      if (alive.current) setBusy(false);
     }
   }
 
   async function start(event: FormEvent) {
     event.preventDefault();
-    if (!location || busy) return;
+
+    if (!location || blocked) return;
+
     setBusy(true);
     setError('');
     try {
       const response = await api.post<Observer>(endpoint, {
         location_id: Number(location)
       });
-      navigate(`/stock/cycle-count/${response.data.sessionId}/`);
+
+      if (alive.current)
+        navigate(`/stock/cycle-count/${response.data.sessionId}/`);
     } catch (exception) {
-      setError(failureMessage(exception));
+      if (alive.current) setError(failureMessage(exception));
     } finally {
-      setBusy(false);
+      if (alive.current) setBusy(false);
+    }
+  }
+
+  async function refresh() {
+    setError('');
+
+    try {
+      await (id
+        ? task.refetch({ throwOnError: true })
+        : locations.refetch({ throwOnError: true }));
+
+      if (alive.current) setRefreshNeeded(false);
+    } catch (exception) {
+      if (alive.current) setError(failureMessage(exception));
     }
   }
 
@@ -275,10 +314,7 @@ export default function CycleCount() {
           variant='default'
           disabled={busy}
           loading={task.isFetching || locations.isFetching}
-          onClick={() => {
-            setError('');
-            void (id ? task.refetch() : locations.refetch());
-          }}
+          onClick={() => void refresh()}
         >{t`Refresh saved state`}</Button>
       </Group>
       {(!id ? locations.isPending : task.isPending) && (
@@ -314,13 +350,13 @@ export default function CycleCount() {
                       value: String(row.id),
                       label: row.name
                     }))}
-                    disabled={busy}
+                    disabled={blocked}
                   />
                   <Group>
                     <Button
                       type='submit'
                       loading={busy}
-                      disabled={!location}
+                      disabled={blocked || !location}
                     >{t`Start location count`}</Button>
                   </Group>
                 </>
@@ -413,12 +449,12 @@ export default function CycleCount() {
                               ? error
                               : undefined
                           }
-                          disabled={busy}
+                          disabled={blocked}
                           styles={{ input: { direction: 'ltr' } }}
                         />
                         <Button
                           type='submit'
-                          disabled={busy || !drafts[item.id]}
+                          disabled={blocked || !drafts[item.id]}
                           loading={busy && activeAction === item.id}
                         >{t`Save observation`}</Button>
                       </Group>
@@ -432,7 +468,7 @@ export default function CycleCount() {
             <Group>
               <Button
                 ref={reviewButton}
-                disabled={busy || pending > 0}
+                disabled={blocked || pending > 0}
                 loading={busy && activeAction === 'REQUEST'}
                 onClick={() =>
                   void command(
@@ -550,14 +586,14 @@ export default function CycleCount() {
                   value={reason}
                   onChange={(event) => setReason(event.currentTarget.value)}
                   maxLength={255}
-                  disabled={busy}
+                  disabled={blocked}
                 />
               )}
               <Group>
                 {currentState === 'PENDING' && (
                   <Button
                     loading={busy && activeAction === 'APPROVED'}
-                    disabled={busy}
+                    disabled={blocked}
                     onClick={() =>
                       void command(
                         `${endpoint}${id}/review/`,
@@ -574,7 +610,7 @@ export default function CycleCount() {
                 {currentState === 'PENDING' && (
                   <Button
                     variant='default'
-                    disabled={busy || !reason.trim()}
+                    disabled={blocked || !reason.trim()}
                     onClick={() =>
                       void command(
                         `${endpoint}${id}/review/`,
@@ -590,7 +626,7 @@ export default function CycleCount() {
                 )}
                 {currentState === 'APPROVED' && (
                   <Button
-                    disabled={busy}
+                    disabled={blocked}
                     onClick={() => {
                       setError('');
                       setConfirm(true);
@@ -600,7 +636,7 @@ export default function CycleCount() {
                 {currentState === 'APPROVED' && (
                   <Button
                     variant='default'
-                    disabled={busy || !reason.trim()}
+                    disabled={blocked || !reason.trim()}
                     onClick={() =>
                       void command(
                         `${endpoint}${id}/review/`,
@@ -644,7 +680,8 @@ export default function CycleCount() {
           <Text>{t`This changes physical stock for the items listed below to their counted quantities. Approval alone did not change stock. A correction requires a new reviewed count.`}</Text>
           {review?.items.map((item) => (
             <Text key={item.item}>
-              {item.partName}:{' '}
+              {item.partName} · {t`Stock item`}{' '}
+              <bdi translate='no'>#{item.item}</bdi>:{' '}
               <bdi translate='no'>
                 {item.expected} → {item.counted} {item.unit}
               </bdi>
@@ -653,12 +690,12 @@ export default function CycleCount() {
           <Group justify='flex-end'>
             <Button
               variant='default'
-              disabled={busy}
+              disabled={blocked}
               onClick={() => setConfirm(false)}
             >{t`Cancel`}</Button>
             <Button
               loading={busy}
-              disabled={busy}
+              disabled={blocked}
               onClick={() =>
                 void command(
                   `${endpoint}${id}/commit/`,

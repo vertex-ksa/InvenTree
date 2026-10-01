@@ -82,7 +82,7 @@ msgstr "حذف"
 #: src/pages/Index/Settings/AccountSettings/MFASettings.tsx:148
 #: src/pages/Index/Settings/AccountSettings/MFASettings.tsx:323
 #: src/pages/Index/Settings/AccountSettings/MFASettings.tsx:414
-#: src/pages/stock/CycleCount.tsx:647
+#: src/pages/stock/CycleCount.tsx:845
 #: src/tables/build/BuildOutputTable.tsx:665
 #: src/tables/settings/ApiTokenTable.tsx:270
 msgid "Cancel"
@@ -3107,7 +3107,7 @@ msgid "Learn more about {code}"
 msgstr "Learn المزيد حول {code}"
 
 #: src/components/nav/CycleCountNavigation.tsx:22
-#: src/pages/stock/CycleCount.tsx:246
+#: src/pages/stock/CycleCount.tsx:407
 msgid "Cycle count"
 msgstr "الجرد الدوري"
 
@@ -3815,7 +3815,7 @@ msgstr "الكمية"
 #: src/forms/StockForms.tsx:1838
 #: src/forms/StockForms.tsx:1885
 #: src/forms/StockForms.tsx:1929
-#: src/pages/stock/CycleCount.tsx:113
+#: src/pages/stock/CycleCount.tsx:169
 #: src/tables/build/BuildLineTable.tsx:109
 msgid "Batch"
 msgstr "دفعة"
@@ -3991,7 +3991,7 @@ msgstr ""
 #: src/components/tables/ColumnRenderers.tsx:137
 #: src/pages/build/BuildOrderDetailsPanel.tsx:60
 #: src/pages/part/PartDetailsPanel.tsx:107
-#: src/pages/stock/CycleCount.tsx:112
+#: src/pages/stock/CycleCount.tsx:168
 #: src/pages/stock/StockDetailsPanel.tsx:99
 #: src/tables/bom/UsedInTable.tsx:56
 #: src/tables/build/BuildOrderTable.tsx:66
@@ -6227,7 +6227,7 @@ msgstr "تعبئة"
 
 #: src/forms/PurchaseOrderForms.tsx:962
 #: src/pages/company/SupplierPartDetailsPanel.tsx:92
-#: src/pages/stock/CycleCount.tsx:111
+#: src/pages/stock/CycleCount.tsx:167
 #: src/tables/purchasing/SupplierPriceBreakTable.tsx:49
 msgid "SKU"
 msgstr ""
@@ -8788,10 +8788,6 @@ msgstr "مجدول مهام"
 msgid "Failed Tasks"
 msgstr "فشل مهام"
 
-#: src/pages/Index/Settings/AdminCenter/TemplateManagementPanel.tsx:67
-#~ msgid "Stock item"
-#~ msgstr "Stock item"
-
 #: src/pages/Index/Settings/AdminCenter/TemplateManagementPanel.tsx:76
 #~ msgid "Build line"
 #~ msgstr "Build line"
@@ -10638,58 +10634,63 @@ msgstr "غير محدد"
 msgid "Delivery Date"
 msgstr "تاريخ تسليم"
 
-#: src/pages/stock/CycleCount.tsx:72
+#: src/pages/stock/CycleCount.tsx:112
 msgid "Counting"
 msgstr "الجرد جارٍ"
 
-#: src/pages/stock/CycleCount.tsx:74
-#: src/pages/stock/CycleCount.tsx:87
+#: src/pages/stock/CycleCount.tsx:115
+#: src/pages/stock/CycleCount.tsx:135
 msgid "Awaiting review"
 msgstr "بانتظار المراجعة"
 
-#: src/pages/stock/CycleCount.tsx:76
+#: src/pages/stock/CycleCount.tsx:118
 msgid "Approved; not applied"
 msgstr "معتمد ولم يُطبّق بعد"
 
-#: src/pages/stock/CycleCount.tsx:79
+#: src/pages/stock/CycleCount.tsx:123
 msgid "Count applied"
 msgstr "تم تطبيق الجرد"
 
-#: src/pages/stock/CycleCount.tsx:81
+#: src/pages/stock/CycleCount.tsx:126
 msgid "Review rejected"
 msgstr "رُفضت المراجعة"
 
-#: src/pages/stock/CycleCount.tsx:83
+#: src/pages/stock/CycleCount.tsx:129
 msgid "Approval revoked"
 msgstr "أُلغي الاعتماد"
 
-#: src/pages/stock/CycleCount.tsx:85
+#: src/pages/stock/CycleCount.tsx:132
 msgid "Approval expired"
 msgstr "انتهت صلاحية الاعتماد"
 
-#: src/pages/stock/CycleCount.tsx:94
+#: src/pages/stock/CycleCount.tsx:143
 msgid "This count is unavailable or cycle counting is disabled. Ask your administrator."
 msgstr "هذا الجرد غير متاح أو الجرد الدوري غير مفعّل. تواصل مع المسؤول."
 
-#: src/pages/stock/CycleCount.tsx:96
+#: src/pages/stock/CycleCount.tsx:146
 msgid "You no longer have access to this count or action. Your entered values are retained."
 msgstr "لم تعد لديك صلاحية لهذا الجرد أو الإجراء. القيم التي أدخلتها محفوظة في النموذج."
 
-#: src/pages/stock/CycleCount.tsx:98
+#: src/pages/stock/CycleCount.tsx:149
 msgid "The count, approval, or stock changed. Refresh to check the saved state. A new count may be required."
 msgstr "تغيّر الجرد أو الاعتماد أو المخزون. حدّث الصفحة للتحقق من الحالة المحفوظة. قد يلزم جرد جديد."
 
-#: src/pages/stock/CycleCount.tsx:100
+#: src/pages/stock/CycleCount.tsx:152
 msgid "The entry could not be saved. Enter a nonnegative quantity with at most five decimal places and check the reason."
 msgstr "تعذّر حفظ الإدخال. أدخل كمية غير سالبة بخمس خانات عشرية كحد أقصى، وتحقق من السبب."
 
-#: src/pages/stock/CycleCount.tsx:102
+#: src/pages/stock/CycleCount.tsx:155
 msgid "The count policy is unavailable. Ask your administrator; entered values are retained."
 msgstr "سياسة الجرد غير متاحة. تواصل مع المسؤول؛ القيم التي أدخلتها باقية في النموذج."
 
-#: src/pages/stock/CycleCount.tsx:103
+#: src/pages/stock/CycleCount.tsx:157
 msgid "The result could not be confirmed. Refresh to check the saved state, or retry the same action. Your entered values are retained."
 msgstr "تعذّر تأكيد النتيجة. حدّث الصفحة للتحقق من الحالة المحفوظة، أو أعد الإجراء نفسه. القيم التي أدخلتها باقية في النموذج."
+
+#: src/pages/stock/CycleCount.tsx:165
+#: src/pages/stock/CycleCount.tsx:833
+msgid "Stock item"
+msgstr "عنصر المخزون"
 
 #: src/pages/stock/CycleCount.tsx:192
 #~ msgid "Loading count"
@@ -10707,213 +10708,213 @@ msgstr "تعذّر تأكيد النتيجة. حدّث الصفحة للتحقق
 #~ msgid "Assigned reviewer view"
 #~ msgstr "عرض المراجع المعيّن"
 
-#: src/pages/stock/CycleCount.tsx:247
+#: src/pages/stock/CycleCount.tsx:408
 msgid "Count {id}"
 msgstr "الجرد {id}"
 
-#: src/pages/stock/CycleCount.tsx:247
+#: src/pages/stock/CycleCount.tsx:408
 msgid "Start a blind location count"
 msgstr "بدء جرد موقع دون إظهار الرصيد"
 
-#: src/pages/stock/CycleCount.tsx:259
+#: src/pages/stock/CycleCount.tsx:420
 msgid "Count action unavailable"
 msgstr "إجراء الجرد غير متاح"
 
-#: src/pages/stock/CycleCount.tsx:272
+#: src/pages/stock/CycleCount.tsx:433
 msgid "Observations are saved as evidence. Only an approved, separately applied count changes stock."
 msgstr "تُحفظ نتائج العدّ كدليل. لا يتغيّر المخزون إلا بعد اعتماد الجرد وتطبيقه بإجراء مستقل."
 
-#: src/pages/stock/CycleCount.tsx:281
+#: src/pages/stock/CycleCount.tsx:439
 msgid "Refresh saved state"
 msgstr "تحديث الحالة المحفوظة"
 
-#: src/pages/stock/CycleCount.tsx:287
+#: src/pages/stock/CycleCount.tsx:445
 msgid "Loading count…"
 msgstr "جارٍ تحميل الجرد…"
 
-#: src/pages/stock/CycleCount.tsx:297
+#: src/pages/stock/CycleCount.tsx:455
 msgid "Choose a stock location"
 msgstr "اختيار موقع المخزون"
 
-#: src/pages/stock/CycleCount.tsx:298
+#: src/pages/stock/CycleCount.tsx:456
 msgid "Count every item in the selected location. This counting view hides recorded quantities; other stock permissions still apply. Serialized stock requires its separate workflow."
 msgstr "عُدّ كل صنف في الموقع المحدد. يخفي عرض الجرد هذا الأرصدة المسجّلة؛ وتظل صلاحيات المخزون الأخرى سارية. يتطلب المخزون ذو الأرقام التسلسلية مسارًا مستقلًا."
 
-#: src/pages/stock/CycleCount.tsx:300
+#: src/pages/stock/CycleCount.tsx:458
 msgid "No count locations are available to your account. Ask your administrator."
 msgstr "لا توجد مواقع جرد متاحة لحسابك. تواصل مع المسؤول."
 
-#: src/pages/stock/CycleCount.tsx:304
+#: src/pages/stock/CycleCount.tsx:462
 msgid "Stock location"
 msgstr "Stock location"
 
-#: src/pages/stock/CycleCount.tsx:305
+#: src/pages/stock/CycleCount.tsx:463
 msgid "Select a location…"
 msgstr "اختيار موقع…"
 
-#: src/pages/stock/CycleCount.tsx:323
+#: src/pages/stock/CycleCount.tsx:482
 msgid "Start location count"
 msgstr "بدء جرد الموقع"
 
-#: src/pages/stock/CycleCount.tsx:338
+#: src/pages/stock/CycleCount.tsx:497
 msgid "The original observations and review are retained. Start a new count to request a new approval."
 msgstr "تظل نتائج العدّ والمراجعة الأصلية محفوظة. ابدأ جردًا جديدًا لطلب اعتماد جديد."
 
-#: src/pages/stock/CycleCount.tsx:343
-#: src/pages/stock/CycleCount.tsx:499
+#: src/pages/stock/CycleCount.tsx:502
+#: src/pages/stock/CycleCount.tsx:676
 msgid "Stock adjustment recorded"
 msgstr "تم تسجيل تسوية المخزون"
 
-#: src/pages/stock/CycleCount.tsx:344
+#: src/pages/stock/CycleCount.tsx:503
 msgid "This count has been applied. Refreshing or retrying its recorded command will not apply it twice."
 msgstr "تم تطبيق هذا الجرد. تحديث الصفحة أو إعادة الإجراء المسجل لا يطبّقه مرة أخرى."
 
-#: src/pages/stock/CycleCount.tsx:349
+#: src/pages/stock/CycleCount.tsx:508
 msgid "Your observations are locked. The assigned independent reviewer must review the variance and explicitly apply an approved count."
 msgstr "نتائج العدّ مقفلة. يجب على المراجع المستقل المعيّن مراجعة الفروق وتطبيق الجرد المعتمد بإجراء صريح."
 
-#: src/pages/stock/CycleCount.tsx:352
+#: src/pages/stock/CycleCount.tsx:511
 msgid "Items remaining: {pending}. Saved observations cannot be edited; corrections require a new count."
 msgstr "الأصناف المتبقية: {pending}. لا يمكن تعديل نتائج العدّ المحفوظة؛ يتطلب التصحيح جردًا جديدًا."
 
-#: src/pages/stock/CycleCount.tsx:368
+#: src/pages/stock/CycleCount.tsx:528
 msgid "Saved observed quantity"
 msgstr "الكمية الفعلية المحفوظة"
 
-#: src/pages/stock/CycleCount.tsx:385
+#: src/pages/stock/CycleCount.tsx:550
 msgid "Observation saved. Stock quantities have not changed."
 msgstr "تم حفظ نتيجة العدّ. لم تتغيّر أرصدة المخزون."
 
-#: src/pages/stock/CycleCount.tsx:395
+#: src/pages/stock/CycleCount.tsx:560
 msgid "Observed quantity"
 msgstr "الكمية الفعلية"
 
 #. placeholder {0}: item.unit || t`item units`
-#: src/pages/stock/CycleCount.tsx:396
+#: src/pages/stock/CycleCount.tsx:561
 msgid "Enter the physical count in {0}, with at most five decimal places."
 msgstr "أدخل الكمية الفعلية بوحدة {0}، بخمس خانات عشرية كحد أقصى."
 
-#: src/pages/stock/CycleCount.tsx:396
+#: src/pages/stock/CycleCount.tsx:561
 msgid "item units"
 msgstr "وحدة الصنف"
 
-#: src/pages/stock/CycleCount.tsx:422
+#: src/pages/stock/CycleCount.tsx:588
 msgid "Save observation"
 msgstr "حفظ نتيجة العدّ"
 
-#: src/pages/stock/CycleCount.tsx:440
+#: src/pages/stock/CycleCount.tsx:608
 msgid "Independent review requested. Stock quantities have not changed."
 msgstr "تم طلب مراجعة مستقلة. لم تتغيّر أرصدة المخزون."
 
-#: src/pages/stock/CycleCount.tsx:443
+#: src/pages/stock/CycleCount.tsx:611
 msgid "Request independent review"
 msgstr "طلب مراجعة مستقلة"
 
-#: src/pages/stock/CycleCount.tsx:446
+#: src/pages/stock/CycleCount.tsx:614
 msgid "Save an observation for every item first."
 msgstr "احفظ نتيجة العدّ لكل صنف أولًا."
 
-#: src/pages/stock/CycleCount.tsx:447
+#: src/pages/stock/CycleCount.tsx:615
 msgid "Requesting review locks these observations."
 msgstr "يؤدي طلب المراجعة إلى قفل نتائج العدّ هذه."
 
-#: src/pages/stock/CycleCount.tsx:455
+#: src/pages/stock/CycleCount.tsx:623
 msgid "Assigned reviewer link"
 msgstr "رابط المراجع المعيّن"
 
-#: src/pages/stock/CycleCount.tsx:461
+#: src/pages/stock/CycleCount.tsx:629
 msgid "Start a new count"
 msgstr "بدء جرد جديد"
 
-#: src/pages/stock/CycleCount.tsx:467
+#: src/pages/stock/CycleCount.tsx:635
 msgid "Independent variance review"
 msgstr "مراجعة مستقلة لفروق الجرد"
 
-#: src/pages/stock/CycleCount.tsx:469
+#: src/pages/stock/CycleCount.tsx:641
 msgid "Policy"
 msgstr "السياسة"
 
-#: src/pages/stock/CycleCount.tsx:470
+#: src/pages/stock/CycleCount.tsx:642
 msgid "Expires"
 msgstr "انتهاء الصلاحية"
 
-#: src/pages/stock/CycleCount.tsx:487
+#: src/pages/stock/CycleCount.tsx:664
 msgid "Stock or item identity changed"
 msgstr "تغيّر المخزون أو تعريف الصنف"
 
-#: src/pages/stock/CycleCount.tsx:488
+#: src/pages/stock/CycleCount.tsx:665
 msgid "These are the original frozen observations. Approval and application are blocked; request a new physical count."
 msgstr "هذه نتائج العدّ الأصلية المثبّتة. الاعتماد والتطبيق غير متاحين؛ اطلب جردًا فعليًا جديدًا."
 
-#: src/pages/stock/CycleCount.tsx:494
+#: src/pages/stock/CycleCount.tsx:671
 msgid "This review cannot be reused. The counter must start a new count."
 msgstr "لا يمكن إعادة استخدام هذه المراجعة. يجب على من يجري العدّ بدء جرد جديد."
 
-#: src/pages/stock/CycleCount.tsx:500
+#: src/pages/stock/CycleCount.tsx:677
 msgid "The approved count was applied once. Original count evidence remains available below."
 msgstr "تم تطبيق الجرد المعتمد مرة واحدة. يظل دليل الجرد الأصلي متاحًا أدناه."
 
-#: src/pages/stock/CycleCount.tsx:516
+#: src/pages/stock/CycleCount.tsx:694
 msgid "Original quantity"
 msgstr "الكمية الأصلية"
 
-#: src/pages/stock/CycleCount.tsx:522
+#: src/pages/stock/CycleCount.tsx:700
 msgid "Counted quantity"
 msgstr "الكمية المعدودة"
 
-#: src/pages/stock/CycleCount.tsx:528
+#: src/pages/stock/CycleCount.tsx:706
 msgid "Adjustment"
 msgstr "فرق التسوية"
 
-#: src/pages/stock/CycleCount.tsx:543
+#: src/pages/stock/CycleCount.tsx:721
 msgid "Review reason"
 msgstr "سبب المراجعة"
 
-#: src/pages/stock/CycleCount.tsx:544
+#: src/pages/stock/CycleCount.tsx:722
 msgid "A reason is required to reject or revoke. Use one line, up to 255 characters."
 msgstr "السبب مطلوب للرفض أو إلغاء الاعتماد. استخدم سطرًا واحدًا لا يتجاوز 255 حرفًا."
 
-#: src/pages/stock/CycleCount.tsx:564
+#: src/pages/stock/CycleCount.tsx:746
 msgid "Count approved. Stock quantities have not changed."
 msgstr "تم اعتماد الجرد. لم تتغيّر أرصدة المخزون."
 
-#: src/pages/stock/CycleCount.tsx:567
+#: src/pages/stock/CycleCount.tsx:749
 msgid "Approve count"
 msgstr "اعتماد الجرد"
 
-#: src/pages/stock/CycleCount.tsx:581
+#: src/pages/stock/CycleCount.tsx:767
 msgid "Review rejected. Stock quantities have not changed."
 msgstr "رُفضت المراجعة. لم تتغيّر أرصدة المخزون."
 
-#: src/pages/stock/CycleCount.tsx:584
+#: src/pages/stock/CycleCount.tsx:770
 msgid "Reject review"
 msgstr "رفض المراجعة"
 
-#: src/pages/stock/CycleCount.tsx:593
+#: src/pages/stock/CycleCount.tsx:780
 msgid "Apply approved count"
 msgstr "تطبيق الجرد المعتمد"
 
-#: src/pages/stock/CycleCount.tsx:607
+#: src/pages/stock/CycleCount.tsx:798
 msgid "Approval revoked. Stock quantities have not changed."
 msgstr "أُلغي الاعتماد. لم تتغيّر أرصدة المخزون."
 
-#: src/pages/stock/CycleCount.tsx:610
+#: src/pages/stock/CycleCount.tsx:801
 msgid "Revoke approval"
 msgstr "إلغاء الاعتماد"
 
-#: src/pages/stock/CycleCount.tsx:622
+#: src/pages/stock/CycleCount.tsx:813
 msgid "Apply this approved count?"
 msgstr "تطبيق هذا الجرد المعتمد؟"
 
-#: src/pages/stock/CycleCount.tsx:633
+#: src/pages/stock/CycleCount.tsx:830
 msgid "This changes physical stock for the items listed below to their counted quantities. Approval alone did not change stock. A correction requires a new reviewed count."
 msgstr "سيغيّر هذا الإجراء رصيد الأصناف أدناه إلى كمياتها المعدودة. الاعتماد وحده لم يغيّر المخزون. يتطلب التصحيح جردًا جديدًا ومراجعة جديدة."
 
-#: src/pages/stock/CycleCount.tsx:655
+#: src/pages/stock/CycleCount.tsx:855
 msgid "Approved stock adjustment recorded."
 msgstr "تم تسجيل تسوية المخزون المعتمدة."
 
-#: src/pages/stock/CycleCount.tsx:658
+#: src/pages/stock/CycleCount.tsx:858
 msgid "Apply stock adjustment"
 msgstr "تطبيق تسوية المخزون"
 
