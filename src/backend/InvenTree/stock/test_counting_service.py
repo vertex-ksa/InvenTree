@@ -3,6 +3,9 @@
 from django.contrib.auth.models import Permission, User
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
+from django.urls import reverse
+
+from rest_framework.test import APIClient
 
 from common.settings import set_global_setting
 from part.models import Part
@@ -22,7 +25,16 @@ class NativeCountTests(TestCase):
 
     def setUp(self):
         """Use isolated synthetic people and stock."""
-        self.counter = User.objects.create_user('counter', is_superuser=True)
+        self.counter = User.objects.create_user('counter')
+        self.counter.user_permissions.add(
+            *Permission.objects.filter(
+                codename__in=[
+                    'view_stockitem',
+                    'add_cyclecountsession',
+                    'change_cyclecountsession',
+                ]
+            )
+        )
         self.reviewer = User.objects.create_user('reviewer', is_superuser=True)
         self.location = StockLocation.objects.create(name='Synthetic count location')
         self.part = Part.objects.create(name='Synthetic count part')
@@ -167,6 +179,19 @@ class NativeCountTests(TestCase):
         self.location.save()
         with self.assertRaises(PermissionDenied):
             self._observe()
+
+    def test_counter_cannot_bypass_review_via_native_count_api(self):
+        """Observation grants do not grant the legacy stock mutation endpoint."""
+        client = APIClient()
+        client.force_authenticate(user=self.counter)
+        response = client.post(
+            reverse('api-stock-count'),
+            {'items': [{'pk': self.item.pk, 'quantity': '1'}]},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 403)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
 
     def test_observation_replay_rechecks_item_ownership(self):
         """A lost acknowledgement cannot expose evidence after ownership removal."""

@@ -16,7 +16,7 @@ from users.permissions import check_user_permission, prefetch_rule_sets
 from users.ruleset import get_ruleset_models
 
 
-def _authorize(user):
+def _authorize(user, action='change', session_permission=None):
     current = User.objects.filter(pk=user.pk).first()
     if current is None or not current.is_active:
         raise PermissionDenied
@@ -24,12 +24,18 @@ def _authorize(user):
     # request-local cache entries to avoid retaining a grant after revocation.
     for role, tables in get_ruleset_models().items():
         if 'stock_stockitem' in tables:
-            InvenTree.cache.set_session_cache(f'role_{current.pk}_{role}_change', None)
+            InvenTree.cache.set_session_cache(
+                f'role_{current.pk}_{role}_{action}', None
+            )
     InvenTree.cache.set_session_cache(
-        f'permission_{current.pk}_stock.change_stockitem', None
+        f'permission_{current.pk}_stock.{action}_stockitem', None
     )
     if not check_user_permission(
-        current, StockItem, 'change', groups=prefetch_rule_sets(current)
+        current, StockItem, action, groups=prefetch_rule_sets(current)
+    ):
+        raise PermissionDenied
+    if session_permission and not current.has_perm(
+        f'stock.{session_permission}_cyclecountsession'
     ):
         raise PermissionDenied
     return current
@@ -58,7 +64,7 @@ def _snapshot(item):
 @transaction.atomic
 def open_count(location, user):
     """Freeze one location; serialized units require their native separate flow."""
-    user = _authorize(user)
+    user = _authorize(user, 'view', 'add')
     items = list(
         StockItem.objects.select_for_update().filter(location=location).order_by('pk')
     )
@@ -75,7 +81,7 @@ def open_count(location, user):
 @transaction.atomic
 def observe_count(session_id, user, item_id, quantity, command_id, expected_revision):
     """Capture a blind observation; same command replays, changed payload conflicts."""
-    user = _authorize(user)
+    user = _authorize(user, 'view', 'change')
     session = CycleCountSession.objects.select_for_update().get(pk=session_id)
     if session.requester_id != user.pk:
         raise PermissionDenied
@@ -147,7 +153,7 @@ def request_count_review(
     approval_creator=None,
 ):
     """Freeze completed evidence through a trusted server C03 producer adapter."""
-    user = _authorize(user)
+    user = _authorize(user, 'view', 'change')
     session = CycleCountSession.objects.select_for_update().get(pk=session_id)
     if session.requester_id != user.pk:
         raise PermissionDenied
