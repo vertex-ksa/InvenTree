@@ -1734,6 +1734,7 @@ class StockTrackingList(
 
 
 stock_api_urls = [
+    path('cycle-count/', include('stock.counting_api')),
     path(
         'location/',
         include([
