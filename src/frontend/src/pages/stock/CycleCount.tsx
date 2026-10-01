@@ -272,7 +272,7 @@ function CountTask() {
     }
   }
 
-  const loadError = task.error ?? locations.error;
+  const loadError = id ? task.error : locations.error;
   return (
     <Stack
       gap='md'
