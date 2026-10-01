@@ -59,6 +59,48 @@ from users.models import Owner
 logger = structlog.get_logger('inventree')
 
 
+class CycleCountSession(models.Model):
+    """Frozen blind-count evidence; only the native commit service changes stock."""
+
+    location = models.ForeignKey('stock.StockLocation', on_delete=models.PROTECT)
+    requester = models.ForeignKey(User, on_delete=models.PROTECT)
+    scope = models.JSONField(default=list)
+    observations = models.JSONField(default=dict)
+    commands = models.JSONField(default=dict)
+    revision = models.PositiveIntegerField(default=0)
+    state = models.CharField(max_length=16, default='OPEN')
+    created = models.DateTimeField(auto_now_add=True)
+    approval_request = models.CharField(max_length=128, blank=True)
+    committed_command = models.CharField(max_length=128, blank=True)
+
+    class Meta:
+        """Use existing stock permissions at the domain boundary."""
+
+        verbose_name = _('Cycle Count Session')
+
+
+class CycleCountApproval(models.Model):
+    """Standalone approval authority, locked with its native count transaction."""
+
+    session = models.OneToOneField(CycleCountSession, on_delete=models.PROTECT)
+    binding = models.JSONField(default=dict)
+    reviewer = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    expires_at = models.DateTimeField()
+    state = models.CharField(max_length=16, default='PENDING')
+    revision = models.PositiveIntegerField(default=0)
+    commands = models.JSONField(default=dict)
+    created = models.DateTimeField(auto_now_add=True)
+    decision_history = models.JSONField(default=list)
+
+    class Meta:
+        """Decision authority is narrower than existing stock mutation grants."""
+
+        permissions = [
+            ('approve_cyclecountapproval', 'Approve an independent cycle count'),
+            ('revoke_cyclecountapproval', 'Revoke a cycle count approval'),
+        ]
+
+
 class StockLocationType(InvenTree.models.MetadataMixin, models.Model):
     """A type of stock location like Warehouse, room, shelf, drawer.
 
