@@ -1,22 +1,30 @@
-"""Native count adapter regression cases; fake approval is NOT_INTEGRATED."""
+"""Native persisted approval and count cases; callback fakes test domain isolation."""
+
+from datetime import timedelta
 
 from django.contrib.auth.models import Permission, User
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from rest_framework.test import APIClient
 
 from common.settings import set_global_setting
 from part.models import Part
 from stock.counting import CountConflictError
+from stock.counting_approval import (
+    commit_native_count,
+    decide_native_review,
+    request_native_review,
+)
 from stock.counting_service import (
     commit_count,
     observe_count,
     open_count,
     request_count_review,
 )
-from stock.models import StockItem, StockLocation
+from stock.models import CycleCountApproval, StockItem, StockLocation
 from users.models import Owner
 
 
@@ -59,6 +67,203 @@ class NativeCountTests(TestCase):
             'count/1',
             lambda binding, actor: 'fake-request',
         )
+
+    def _native_review(self):
+        self._observe()
+        self.expiry = timezone.now() + timedelta(hours=1)
+        return request_native_review(
+            self.session.pk,
+            self.counter,
+            1,
+            'synthetic',
+            'test',
+            'count/1',
+            self.reviewer,
+            self.expiry,
+            'request-1',
+        )
+
+    def _native_decide(self, decision='APPROVED', revision=0, command='decision-1'):
+        return decide_native_review(
+            self.session.pk,
+            self.reviewer,
+            revision,
+            command,
+            decision,
+            'synthetic',
+            'test',
+            'count/1',
+            reason='Synthetic decision' if decision in ('REJECTED', 'REVOKED') else '',
+        )
+
+    def _native_commit(self, command='native-commit-1'):
+        return commit_native_count(
+            self.session.pk, self.reviewer, command, 'synthetic', 'test', 'count/1'
+        )
+
+    def test_persisted_native_approval_and_commit_replay(self):
+        """Approval changes no balance; consumption performs one native adjustment."""
+        request = self._native_review()
+        replay = request_native_review(
+            self.session.pk,
+            self.counter,
+            1,
+            'synthetic',
+            'test',
+            'count/1',
+            self.reviewer,
+            self.expiry,
+            'request-1',
+        )
+        self.assertEqual(request, replay)
+        decision = self._native_decide()
+        self.assertEqual(decision, self._native_decide())
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+        before = self.item.tracking_info.count()
+        receipt = self._native_commit()
+        self.item.refresh_from_db()
+        self.assertEqual(str(self.item.quantity), '8.50000')
+        history = self.item.tracking_info.count()
+        self.assertEqual(history, before + 1)
+        self.assertEqual(receipt, self._native_commit())
+        self.assertEqual(history, self.item.tracking_info.count())
+        self.assertEqual(self._native_decide()['state'], 'CONSUMED')
+        acknowledged = request_native_review(
+            self.session.pk,
+            self.counter,
+            1,
+            'synthetic',
+            'test',
+            'count/1',
+            self.reviewer,
+            self.expiry,
+            'request-1',
+        )
+        self.assertEqual(acknowledged['state'], 'CONSUMED')
+        self.assertEqual(history, self.item.tracking_info.count())
+        self.assertEqual(
+            CycleCountApproval.objects.get(session=self.session).state, 'CONSUMED'
+        )
+        with self.assertRaises(CountConflictError):
+            self._native_commit('different-command')
+
+    def test_native_approval_revocation(self):
+        """A revoked request cannot be consumed or overwritten."""
+        self._native_review()
+        self._native_decide()
+        self._native_decide('REVOKED', 1, 'revoke-1')
+        with self.assertRaises(CountConflictError):
+            self._native_commit()
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+
+    def test_native_approval_expiry(self):
+        """An approved request expires independently of its decision state."""
+        self._native_review()
+        self._native_decide()
+        approval = CycleCountApproval.objects.get(session=self.session)
+        approval.expires_at = timezone.now() - timedelta(seconds=1)
+        approval.save(update_fields=['expires_at'])
+        with self.assertRaises(CountConflictError):
+            self._native_commit()
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+
+    def test_native_approval_reviewer_removed(self):
+        """Removing assigned reviewer makes a persisted approval unusable."""
+        self._native_review()
+        self._native_decide()
+        self.reviewer.delete()
+        controller = User.objects.create_user('controller', is_superuser=True)
+        with self.assertRaises(CountConflictError):
+            commit_native_count(
+                self.session.pk, controller, 'commit', 'synthetic', 'test', 'count/1'
+            )
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+
+    def test_native_approval_current_reviewer_grant_required(self):
+        """Decision-time permission does not survive removal before consumption."""
+        self.reviewer.is_superuser = False
+        self.reviewer.save()
+        self.reviewer.user_permissions.add(
+            *Permission.objects.filter(
+                codename__in=['change_stockitem', 'approve_cyclecountapproval']
+            )
+        )
+        self._native_review()
+        self._native_decide()
+        self.reviewer.user_permissions.remove(
+            Permission.objects.get(codename='approve_cyclecountapproval')
+        )
+        with self.assertRaises(PermissionDenied):
+            self._native_commit()
+
+    def test_native_approval_material_change_and_command_conflicts(self):
+        """CAS and immutable payload checks protect decision and stock commit."""
+        self._native_review()
+        with self.assertRaises(CountConflictError):
+            self._native_decide(revision=1)
+        self._native_decide()
+        with self.assertRaises(CountConflictError):
+            self._native_decide('REJECTED')
+        self.item.stocktake('9', self.reviewer, notes='Synthetic intervening movement')
+        with self.assertRaises(CountConflictError):
+            self._native_commit()
+        self.assertEqual(
+            CycleCountApproval.objects.get(session=self.session).state, 'APPROVED'
+        )
+
+    def test_native_approval_requester_cannot_decide(self):
+        """Even a stock superuser cannot approve their own evidence."""
+        self._native_review()
+        self.counter.is_superuser = True
+        self.counter.save()
+        with self.assertRaises(PermissionDenied):
+            decide_native_review(
+                self.session.pk,
+                self.counter,
+                0,
+                'self',
+                'APPROVED',
+                'synthetic',
+                'test',
+                'count/1',
+            )
+
+    def test_native_approval_state_without_decision_is_not_authority(self):
+        """A mutable state flag cannot replace a bound persisted decision."""
+        self._native_review()
+        CycleCountApproval.objects.filter(session=self.session).update(state='APPROVED')
+        with self.assertRaises(CountConflictError):
+            self._native_commit()
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+
+    def test_native_approval_normalizes_non_utc_expiry(self):
+        """A trusted non-UTC aware expiry survives database reload and replay."""
+        from datetime import timezone as datetime_timezone
+
+        self._observe()
+        expiry = (timezone.now() + timedelta(hours=1)).astimezone(
+            datetime_timezone(timedelta(hours=3))
+        )
+        arguments = (
+            self.session.pk,
+            self.counter,
+            1,
+            'synthetic',
+            'test',
+            'count/1',
+            self.reviewer,
+            expiry,
+            'request-timezone',
+        )
+        receipt = request_native_review(*arguments)
+        self.assertEqual(receipt, request_native_review(*arguments))
+        self._native_decide()
+        self._native_commit()
 
     def test_native_adjustment_and_replay(self):
         """Commit through native stocktake and preserve one tracking effect."""

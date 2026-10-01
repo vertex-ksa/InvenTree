@@ -1,7 +1,8 @@
-"""Opt-in native cycle-count commands, pending an authoritative C03 adapter/UI.
+"""Opt-in native cycle-count domain commands.
 
-No public endpoint registers this module. Integration must supply a server-owned
-approval validator and deployment identity before exposing the commands.
+No public endpoint registers this module. Standalone persisted approval authority
+is in counting_approval; integrations must select trusted installation identity
+and policy before exposing its wrappers. Direct callback inputs are internal only.
 """
 
 from django.contrib.auth.models import User
