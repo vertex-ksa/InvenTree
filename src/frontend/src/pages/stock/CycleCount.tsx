@@ -142,7 +142,6 @@ function CountTask() {
       alive.current = false;
     };
   }, []);
-  const blocked = busy || refreshNeeded;
   const [activeAction, setActiveAction] = useState<string | number>('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -173,8 +172,13 @@ function CountTask() {
     enabled: !!id,
     retry: false
   });
-  const observer = !reviewer ? (task.data as Observer | undefined) : undefined;
-  const review = reviewer ? (task.data as Reviewer | undefined) : undefined;
+  const blocked = busy || refreshNeeded || task.isError;
+  const observer =
+    !reviewer && !task.isError
+      ? (task.data as Observer | undefined)
+      : undefined;
+  const review =
+    reviewer && !task.isError ? (task.data as Reviewer | undefined) : undefined;
   const currentState =
     review?.approvalState ?? observer?.review?.state ?? observer?.state ?? '';
   const terminal = ['REJECTED', 'REVOKED', 'EXPIRED'].includes(currentState);
@@ -327,7 +331,7 @@ function CountTask() {
           <Skeleton height={110} animate={false} />
         </Stack>
       )}
-      {!id && locations.data && (
+      {!id && !locations.isError && locations.data && (
         <Paper withBorder p='md'>
           <form onSubmit={start}>
             <Stack>
