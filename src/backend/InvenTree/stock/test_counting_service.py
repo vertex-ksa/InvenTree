@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import Permission, User
 from django.core.exceptions import PermissionDenied
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -28,8 +28,12 @@ from stock.models import CycleCountApproval, StockItem, StockLocation
 from users.models import Owner
 
 
+@override_settings(USE_TZ=True)
 class NativeCountTests(TestCase):
-    """Ensure native tracking, replay and authorization protect physical stock."""
+    """Use production timezone semantics for explicit aware approval expiry.
+
+    InvenTree intentionally disables USE_TZ in its general test settings.
+    """
 
     def setUp(self):
         """Use isolated synthetic people and stock."""
