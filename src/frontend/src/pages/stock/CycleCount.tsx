@@ -661,6 +661,8 @@ function CountTask() {
           if (!busy) setConfirm(false);
         }}
         title={t`Apply this approved count?`}
+        closeButtonProps={{ 'aria-label': t`Cancel` }}
+        styles={{ body: { overscrollBehavior: 'contain' } }}
         closeOnEscape={!busy}
         closeOnClickOutside={!busy}
         withCloseButton={!busy}
