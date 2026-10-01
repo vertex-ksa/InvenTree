@@ -316,6 +316,7 @@ class CountReview(CountView):
         return Response(
             {
                 'sessionId': pk,
+                'location': {'id': session.location_id, 'name': session.location.name},
                 'state': session.state,
                 'countRevision': session.revision,
                 'requestId': approval.pk,

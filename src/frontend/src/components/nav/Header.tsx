@@ -44,6 +44,7 @@ import { useUserState } from '../../states/UserState';
 import { ScanButton } from '../buttons/ScanButton';
 import { SpotlightButton } from '../buttons/SpotlightButton';
 import { Alerts, errorCodeLink } from './Alerts';
+import CycleCountNavigation from './CycleCountNavigation';
 import { MainMenu } from './MainMenu';
 import { NavHoverMenu } from './NavHoverMenu';
 import { NavigationDrawer } from './NavigationDrawer';
@@ -185,6 +186,7 @@ export function Header() {
           <Group>
             <NavHoverMenu openDrawer={openNavDrawer} />
             <NavTabs />
+            <CycleCountNavigation />
           </Group>
           {navbar_message && (
             <Text>

@@ -120,6 +120,7 @@ class CountApiTests(TestCase):
             reverse('api-cycle-count-review', kwargs={'pk': self.pk})
         )
         self.assertEqual(evidence.status_code, 200)
+        self.assertEqual(evidence.data['location']['id'], self.location.pk)
         self.assertEqual(evidence.data['items'][0]['expected'], '10.00000')
         self.assertEqual(evidence.data['items'][0]['delta'], '-1.50000')
         decision = {

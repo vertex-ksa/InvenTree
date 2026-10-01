@@ -58,6 +58,10 @@ export const StockDetail = Loadable(
   lazy(() => import('./pages/stock/StockDetail'))
 );
 
+export const CycleCount = Loadable(
+  lazy(() => import('./pages/stock/CycleCount'))
+);
+
 export const BuildIndex = Loadable(
   lazy(() => import('./pages/build/BuildIndex'))
 );
@@ -185,6 +189,7 @@ export const routes = (
         <Route path=':id/*' element={<PartDetail />} />
       </Route>
       <Route path='stock/'>
+        <Route path='cycle-count/:id?/:view?' element={<CycleCount />} />
         <Route index element={<Navigate to='location/index/' />} />
         <Route path='location/:id?/*' element={<LocationDetail />} />
         <Route path='item/:id/*' element={<StockDetail />} />
