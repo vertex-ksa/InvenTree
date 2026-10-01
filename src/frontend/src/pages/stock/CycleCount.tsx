@@ -1,10 +1,12 @@
 import { i18n } from '@lingui/core';
 import { t } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
 import {
   Alert,
   Anchor,
   Badge,
   Button,
+  DirectionContext,
   Group,
   Modal,
   Paper,
@@ -15,6 +17,7 @@ import {
   TextInput,
   Title
 } from '@mantine/core';
+import { useDirection } from '@mantine/core';
 import { useWindowEvent } from '@mantine/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
@@ -123,9 +126,24 @@ function ItemIdentity({ item }: { item: Item | ReviewItem }) {
 export default function CycleCount() {
   const { id, view } = useParams();
   const actorId = useUserState((state) => state.user?.pk);
-  return <CountTask key={JSON.stringify([actorId, id, view])} />;
+  const { i18n: activeI18n } = useLingui();
+  const nativeDirection = useDirection();
+  const direction = activeI18n.locale.split(/[-_]/)[0] === 'ar' ? 'rtl' : 'ltr';
+  // Scope direction to this task and its portal; changing locale keeps drafts.
+  return (
+    <DirectionContext.Provider value={{ ...nativeDirection, dir: direction }}>
+      <CountTask
+        key={JSON.stringify([actorId, id, view])}
+        direction={direction}
+        locale={activeI18n.locale.replaceAll('_', '-')}
+      />
+    </DirectionContext.Provider>
+  );
 }
-function CountTask() {
+function CountTask({
+  direction,
+  locale
+}: { direction: 'ltr' | 'rtl'; locale: string }) {
   const { id, view } = useParams();
   const reviewer = view === 'review';
   const navigate = useNavigate();
@@ -279,6 +297,8 @@ function CountTask() {
   const loadError = id ? task.error : locations.error;
   return (
     <Stack
+      dir={direction}
+      lang={locale}
       gap='md'
       style={{
         fontVariantNumeric: 'tabular-nums',
@@ -660,6 +680,8 @@ function CountTask() {
         </Stack>
       )}
       <Modal
+        dir={direction}
+        lang={locale}
         opened={confirm}
         onClose={() => {
           if (!busy) setConfirm(false);
