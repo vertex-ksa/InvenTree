@@ -77,6 +77,7 @@ msgstr "Delete"
 #: src/pages/Index/Settings/AccountSettings/MFASettings.tsx:148
 #: src/pages/Index/Settings/AccountSettings/MFASettings.tsx:323
 #: src/pages/Index/Settings/AccountSettings/MFASettings.tsx:414
+#: src/pages/stock/CycleCount.tsx:695
 #: src/tables/build/BuildOutputTable.tsx:665
 #: src/tables/settings/ApiTokenTable.tsx:270
 msgid "Cancel"
@@ -98,7 +99,7 @@ msgstr "Actions"
 
 #: lib/components/SearchInput.tsx:34
 #: src/components/forms/fields/RelatedModelField.tsx:549
-#: src/components/nav/Header.tsx:196
+#: src/components/nav/Header.tsx:198
 #: src/components/wizards/ImportPartWizard.tsx:200
 #: src/components/wizards/ImportPartWizard.tsx:233
 #: src/pages/Index/Settings/UserSettings.tsx:78
@@ -3100,6 +3101,11 @@ msgstr "CORS is set to allow all origins."
 msgid "Learn more about {code}"
 msgstr "Learn more about {code}"
 
+#: src/components/nav/CycleCountNavigation.tsx:22
+#: src/pages/stock/CycleCount.tsx:286
+msgid "Cycle count"
+msgstr "Cycle count"
+
 #: src/components/nav/DetailNavigation.tsx:34
 msgid "Next item"
 msgstr "Next item"
@@ -3118,12 +3124,16 @@ msgstr "Remove navigation filters from current view"
 msgid "{0} of {1}"
 msgstr "{0} of {1}"
 
-#: src/components/nav/Header.tsx:68
-#: src/components/nav/Header.tsx:75
+#: src/components/nav/Header.tsx:69
+#: src/components/nav/Header.tsx:76
 msgid "Open search"
 msgstr "Open search"
 
-#: src/components/nav/Header.tsx:215
+#: src/components/nav/Header.tsx:216
+#~ msgid "Administrator Mode"
+#~ msgstr "Administrator Mode"
+
+#: src/components/nav/Header.tsx:217
 #: src/components/nav/NavigationDrawer.tsx:134
 #: src/components/nav/NotificationDrawer.tsx:185
 #: src/pages/Index/Settings/SystemSettings.tsx:145
@@ -3133,19 +3143,15 @@ msgstr "Open search"
 msgid "Notifications"
 msgstr "Notifications"
 
-#: src/components/nav/Header.tsx:216
-#~ msgid "Administrator Mode"
-#~ msgstr "Administrator Mode"
-
-#: src/components/nav/Header.tsx:237
+#: src/components/nav/Header.tsx:239
 msgid "Superuser Mode"
 msgstr "Superuser Mode"
 
-#: src/components/nav/Header.tsx:237
+#: src/components/nav/Header.tsx:239
 msgid "Admin Mode"
 msgstr "Admin Mode"
 
-#: src/components/nav/Header.tsx:243
+#: src/components/nav/Header.tsx:245
 msgid "The current user has elevated privileges and should not be used for regular usage."
 msgstr "The current user has elevated privileges and should not be used for regular usage."
 
@@ -3804,6 +3810,7 @@ msgstr "Quantity"
 #: src/forms/StockForms.tsx:1838
 #: src/forms/StockForms.tsx:1885
 #: src/forms/StockForms.tsx:1929
+#: src/pages/stock/CycleCount.tsx:116
 #: src/tables/build/BuildLineTable.tsx:109
 msgid "Batch"
 msgstr "Batch"
@@ -3979,6 +3986,7 @@ msgstr "IPN"
 #: src/components/tables/ColumnRenderers.tsx:137
 #: src/pages/build/BuildOrderDetailsPanel.tsx:60
 #: src/pages/part/PartDetailsPanel.tsx:107
+#: src/pages/stock/CycleCount.tsx:115
 #: src/pages/stock/StockDetailsPanel.tsx:99
 #: src/tables/bom/UsedInTable.tsx:56
 #: src/tables/build/BuildOrderTable.tsx:66
@@ -6214,6 +6222,7 @@ msgstr "Packaging"
 
 #: src/forms/PurchaseOrderForms.tsx:962
 #: src/pages/company/SupplierPartDetailsPanel.tsx:92
+#: src/pages/stock/CycleCount.tsx:114
 #: src/tables/purchasing/SupplierPriceBreakTable.tsx:49
 msgid "SKU"
 msgstr "SKU"
@@ -8774,10 +8783,6 @@ msgstr "Scheduled Tasks"
 msgid "Failed Tasks"
 msgstr "Failed Tasks"
 
-#: src/pages/Index/Settings/AdminCenter/TemplateManagementPanel.tsx:67
-#~ msgid "Stock item"
-#~ msgstr "Stock item"
-
 #: src/pages/Index/Settings/AdminCenter/TemplateManagementPanel.tsx:76
 #~ msgid "Build line"
 #~ msgstr "Build line"
@@ -8801,10 +8806,6 @@ msgstr "Failed Tasks"
 #: src/pages/Index/Settings/AdminCenter/TemplateManagementPanel.tsx:145
 #~ msgid "Tests"
 #~ msgstr "Tests"
-
-#: src/pages/Index/Settings/AdminCenter/TemplateManagementPanel.tsx:154
-#~ msgid "Stock location"
-#~ msgstr "Stock location"
 
 #: src/pages/Index/Settings/AdminCenter/UnitManagementPanel.tsx:21
 msgid "Alias"
@@ -10627,6 +10628,274 @@ msgstr "Not checked"
 #: src/tables/sales/SalesOrderShipmentTable.tsx:190
 msgid "Delivery Date"
 msgstr "Delivery Date"
+
+#: src/pages/stock/CycleCount.tsx:73
+msgid "Counting"
+msgstr "Counting"
+
+#: src/pages/stock/CycleCount.tsx:75
+#: src/pages/stock/CycleCount.tsx:88
+msgid "Awaiting review"
+msgstr "Awaiting review"
+
+#: src/pages/stock/CycleCount.tsx:77
+msgid "Approved; not applied"
+msgstr "Approved; not applied"
+
+#: src/pages/stock/CycleCount.tsx:80
+msgid "Count applied"
+msgstr "Count applied"
+
+#: src/pages/stock/CycleCount.tsx:82
+msgid "Review rejected"
+msgstr "Review rejected"
+
+#: src/pages/stock/CycleCount.tsx:84
+msgid "Approval revoked"
+msgstr "Approval revoked"
+
+#: src/pages/stock/CycleCount.tsx:86
+msgid "Approval expired"
+msgstr "Approval expired"
+
+#: src/pages/stock/CycleCount.tsx:95
+msgid "This count is unavailable or cycle counting is disabled. Ask your administrator."
+msgstr "This count is unavailable or cycle counting is disabled. Ask your administrator."
+
+#: src/pages/stock/CycleCount.tsx:97
+msgid "You no longer have access to this count or action. Your entered values are retained."
+msgstr "You no longer have access to this count or action. Your entered values are retained."
+
+#: src/pages/stock/CycleCount.tsx:99
+msgid "The count, approval, or stock changed. Refresh to check the saved state. A new count may be required."
+msgstr "The count, approval, or stock changed. Refresh to check the saved state. A new count may be required."
+
+#: src/pages/stock/CycleCount.tsx:101
+msgid "The entry could not be saved. Enter a nonnegative quantity with at most five decimal places and check the reason."
+msgstr "The entry could not be saved. Enter a nonnegative quantity with at most five decimal places and check the reason."
+
+#: src/pages/stock/CycleCount.tsx:103
+msgid "The count policy is unavailable. Ask your administrator; entered values are retained."
+msgstr "The count policy is unavailable. Ask your administrator; entered values are retained."
+
+#: src/pages/stock/CycleCount.tsx:104
+msgid "The result could not be confirmed. Refresh to check the saved state, or retry the same action. Your entered values are retained."
+msgstr "The result could not be confirmed. Refresh to check the saved state, or retry the same action. Your entered values are retained."
+
+#: src/pages/stock/CycleCount.tsx:112
+#: src/pages/stock/CycleCount.tsx:683
+msgid "Stock item"
+msgstr "Stock item"
+
+#: src/pages/stock/CycleCount.tsx:287
+msgid "Count {id}"
+msgstr "Count {id}"
+
+#: src/pages/stock/CycleCount.tsx:287
+msgid "Start a blind location count"
+msgstr "Start a blind location count"
+
+#: src/pages/stock/CycleCount.tsx:299
+msgid "Count action unavailable"
+msgstr "Count action unavailable"
+
+#: src/pages/stock/CycleCount.tsx:312
+msgid "Observations are saved as evidence. Only an approved, separately applied count changes stock."
+msgstr "Observations are saved as evidence. Only an approved, separately applied count changes stock."
+
+#: src/pages/stock/CycleCount.tsx:318
+msgid "Refresh saved state"
+msgstr "Refresh saved state"
+
+#: src/pages/stock/CycleCount.tsx:324
+msgid "Loading count…"
+msgstr "Loading count…"
+
+#: src/pages/stock/CycleCount.tsx:334
+msgid "Choose a stock location"
+msgstr "Choose a stock location"
+
+#: src/pages/stock/CycleCount.tsx:335
+msgid "Count every item in the selected location. This counting view hides recorded quantities; other stock permissions still apply. Serialized stock requires its separate workflow."
+msgstr "Count every item in the selected location. This counting view hides recorded quantities; other stock permissions still apply. Serialized stock requires its separate workflow."
+
+#: src/pages/stock/CycleCount.tsx:337
+msgid "No count locations are available to your account. Ask your administrator."
+msgstr "No count locations are available to your account. Ask your administrator."
+
+#: src/pages/stock/CycleCount.tsx:341
+msgid "Stock location"
+msgstr "Stock location"
+
+#: src/pages/stock/CycleCount.tsx:342
+msgid "Select a location…"
+msgstr "Select a location…"
+
+#: src/pages/stock/CycleCount.tsx:360
+msgid "Start location count"
+msgstr "Start location count"
+
+#: src/pages/stock/CycleCount.tsx:375
+msgid "The original observations and review are retained. Start a new count to request a new approval."
+msgstr "The original observations and review are retained. Start a new count to request a new approval."
+
+#: src/pages/stock/CycleCount.tsx:380
+#: src/pages/stock/CycleCount.tsx:540
+msgid "Stock adjustment recorded"
+msgstr "Stock adjustment recorded"
+
+#: src/pages/stock/CycleCount.tsx:381
+msgid "This count has been applied. Refreshing or retrying its recorded command will not apply it twice."
+msgstr "This count has been applied. Refreshing or retrying its recorded command will not apply it twice."
+
+#: src/pages/stock/CycleCount.tsx:386
+msgid "Your observations are locked. The assigned independent reviewer must review the variance and explicitly apply an approved count."
+msgstr "Your observations are locked. The assigned independent reviewer must review the variance and explicitly apply an approved count."
+
+#: src/pages/stock/CycleCount.tsx:389
+msgid "Items remaining: {pending}. Saved observations cannot be edited; corrections require a new count."
+msgstr "Items remaining: {pending}. Saved observations cannot be edited; corrections require a new count."
+
+#: src/pages/stock/CycleCount.tsx:405
+msgid "Saved observed quantity"
+msgstr "Saved observed quantity"
+
+#: src/pages/stock/CycleCount.tsx:422
+msgid "Observation saved. Stock quantities have not changed."
+msgstr "Observation saved. Stock quantities have not changed."
+
+#: src/pages/stock/CycleCount.tsx:432
+msgid "Observed quantity"
+msgstr "Observed quantity"
+
+#. placeholder {0}: item.unit || t`item units`
+#: src/pages/stock/CycleCount.tsx:433
+msgid "Enter the physical count in {0}, with at most five decimal places."
+msgstr "Enter the physical count in {0}, with at most five decimal places."
+
+#: src/pages/stock/CycleCount.tsx:433
+msgid "item units"
+msgstr "item units"
+
+#: src/pages/stock/CycleCount.tsx:459
+msgid "Save observation"
+msgstr "Save observation"
+
+#: src/pages/stock/CycleCount.tsx:477
+msgid "Independent review requested. Stock quantities have not changed."
+msgstr "Independent review requested. Stock quantities have not changed."
+
+#: src/pages/stock/CycleCount.tsx:480
+msgid "Request independent review"
+msgstr "Request independent review"
+
+#: src/pages/stock/CycleCount.tsx:483
+msgid "Save an observation for every item first."
+msgstr "Save an observation for every item first."
+
+#: src/pages/stock/CycleCount.tsx:484
+msgid "Requesting review locks these observations."
+msgstr "Requesting review locks these observations."
+
+#: src/pages/stock/CycleCount.tsx:492
+msgid "Assigned reviewer link"
+msgstr "Assigned reviewer link"
+
+#: src/pages/stock/CycleCount.tsx:498
+msgid "Start a new count"
+msgstr "Start a new count"
+
+#: src/pages/stock/CycleCount.tsx:504
+msgid "Independent variance review"
+msgstr "Independent variance review"
+
+#: src/pages/stock/CycleCount.tsx:510
+msgid "Policy"
+msgstr "Policy"
+
+#: src/pages/stock/CycleCount.tsx:511
+msgid "Expires"
+msgstr "Expires"
+
+#: src/pages/stock/CycleCount.tsx:528
+msgid "Stock or item identity changed"
+msgstr "Stock or item identity changed"
+
+#: src/pages/stock/CycleCount.tsx:529
+msgid "These are the original frozen observations. Approval and application are blocked; request a new physical count."
+msgstr "These are the original frozen observations. Approval and application are blocked; request a new physical count."
+
+#: src/pages/stock/CycleCount.tsx:535
+msgid "This review cannot be reused. The counter must start a new count."
+msgstr "This review cannot be reused. The counter must start a new count."
+
+#: src/pages/stock/CycleCount.tsx:541
+msgid "The approved count was applied once. Original count evidence remains available below."
+msgstr "The approved count was applied once. Original count evidence remains available below."
+
+#: src/pages/stock/CycleCount.tsx:557
+msgid "Original quantity"
+msgstr "Original quantity"
+
+#: src/pages/stock/CycleCount.tsx:563
+msgid "Counted quantity"
+msgstr "Counted quantity"
+
+#: src/pages/stock/CycleCount.tsx:569
+msgid "Adjustment"
+msgstr "Adjustment"
+
+#: src/pages/stock/CycleCount.tsx:584
+msgid "Review reason"
+msgstr "Review reason"
+
+#: src/pages/stock/CycleCount.tsx:585
+msgid "A reason is required to reject or revoke. Use one line, up to 255 characters."
+msgstr "A reason is required to reject or revoke. Use one line, up to 255 characters."
+
+#: src/pages/stock/CycleCount.tsx:605
+msgid "Count approved. Stock quantities have not changed."
+msgstr "Count approved. Stock quantities have not changed."
+
+#: src/pages/stock/CycleCount.tsx:608
+msgid "Approve count"
+msgstr "Approve count"
+
+#: src/pages/stock/CycleCount.tsx:622
+msgid "Review rejected. Stock quantities have not changed."
+msgstr "Review rejected. Stock quantities have not changed."
+
+#: src/pages/stock/CycleCount.tsx:625
+msgid "Reject review"
+msgstr "Reject review"
+
+#: src/pages/stock/CycleCount.tsx:634
+msgid "Apply approved count"
+msgstr "Apply approved count"
+
+#: src/pages/stock/CycleCount.tsx:648
+msgid "Approval revoked. Stock quantities have not changed."
+msgstr "Approval revoked. Stock quantities have not changed."
+
+#: src/pages/stock/CycleCount.tsx:651
+msgid "Revoke approval"
+msgstr "Revoke approval"
+
+#: src/pages/stock/CycleCount.tsx:663
+msgid "Apply this approved count?"
+msgstr "Apply this approved count?"
+
+#: src/pages/stock/CycleCount.tsx:680
+msgid "This changes physical stock for the items listed below to their counted quantities. Approval alone did not change stock. A correction requires a new reviewed count."
+msgstr "This changes physical stock for the items listed below to their counted quantities. Approval alone did not change stock. A correction requires a new reviewed count."
+
+#: src/pages/stock/CycleCount.tsx:703
+msgid "Approved stock adjustment recorded."
+msgstr "Approved stock adjustment recorded."
+
+#: src/pages/stock/CycleCount.tsx:706
+msgid "Apply stock adjustment"
+msgstr "Apply stock adjustment"
 
 #: src/pages/stock/LocationDetail.tsx:124
 msgid "Location Details"
