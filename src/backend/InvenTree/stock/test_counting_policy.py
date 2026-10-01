@@ -45,7 +45,7 @@ class CountPolicyTests(unittest.TestCase):
             'NaN',
             'Infinity',
             '1.000001',
-            '100000000000000',
+            '10000000000',
             'garbage',
         ]:
             with self.assertRaises(CountConflictError):

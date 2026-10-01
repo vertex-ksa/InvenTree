@@ -1,9 +1,10 @@
 """Native count adapter regression cases; fake approval is NOT_INTEGRATED."""
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 
+from common.settings import set_global_setting
 from part.models import Part
 from stock.counting import CountConflictError
 from stock.counting_service import (
@@ -13,6 +14,7 @@ from stock.counting_service import (
     request_count_review,
 )
 from stock.models import StockItem, StockLocation
+from users.models import Owner
 
 
 class NativeCountTests(TestCase):
@@ -71,7 +73,8 @@ class NativeCountTests(TestCase):
             'count/1',
             validator,
         )
-        self.assertEqual(committed.pk, replay.pk)
+        self.assertEqual(committed['sessionId'], replay['sessionId'])
+        self.assertEqual(set(replay), {'sessionId', 'state', 'commandId'})
         self.assertEqual(self.item.tracking_info.count(), history)
         with self.assertRaises(CountConflictError):
             commit_count(
@@ -129,9 +132,53 @@ class NativeCountTests(TestCase):
         self.item.refresh_from_db()
         self.assertEqual(self.item.quantity, 11)
 
+    def test_stale_observations_do_not_create_review_request(self):
+        """Surface movement conflicts before requesting independent approval."""
+        self._observe()
+        self.item.stocktake('11', self.reviewer)
+        with self.assertRaises(CountConflictError):
+            request_count_review(
+                self.session.pk,
+                self.counter,
+                1,
+                'synthetic',
+                'test',
+                'count/1',
+                lambda *args: self.fail('Stale evidence sent to producer'),
+            )
+
     def test_revoked_counter_denied(self):
         """Recheck active identity even with an existing in-memory actor."""
         self.counter.is_active = False
         self.counter.save()
+        with self.assertRaises(PermissionDenied):
+            self._observe()
+
+    def test_location_ownership_denied_despite_stock_permission(self):
+        """A native model grant cannot bypass location ownership control."""
+        self.counter.is_superuser = False
+        self.counter.save()
+        self.counter.user_permissions.add(
+            Permission.objects.get(codename='change_stockitem')
+        )
+        set_global_setting('STOCK_OWNERSHIP_CONTROL', True)
+        self.addCleanup(set_global_setting, 'STOCK_OWNERSHIP_CONTROL', False)
+        self.location.owner = Owner.get_owner(self.reviewer)
+        self.location.save()
+        with self.assertRaises(PermissionDenied):
+            self._observe()
+
+    def test_observation_replay_rechecks_item_ownership(self):
+        """A lost acknowledgement cannot expose evidence after ownership removal."""
+        self._observe()
+        self.counter.is_superuser = False
+        self.counter.save()
+        self.counter.user_permissions.add(
+            Permission.objects.get(codename='change_stockitem')
+        )
+        set_global_setting('STOCK_OWNERSHIP_CONTROL', True)
+        self.addCleanup(set_global_setting, 'STOCK_OWNERSHIP_CONTROL', False)
+        self.item.owner = Owner.get_owner(self.reviewer)
+        self.item.save()
         with self.assertRaises(PermissionDenied):
             self._observe()

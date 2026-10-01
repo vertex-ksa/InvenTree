@@ -9,16 +9,39 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Max
 
+import InvenTree.cache
 from stock.counting import CountConflictError, evidence_hash, quantity_text, variance
-from stock.models import CycleCountSession, StockItem
+from stock.models import CycleCountSession, StockItem, StockLocation
+from users.permissions import check_user_permission, prefetch_rule_sets
+from users.ruleset import get_ruleset_models
 
 
 def _authorize(user):
     current = User.objects.filter(pk=user.pk).first()
-    if (
-        current is None
-        or not current.is_active
-        or not current.has_perm('stock.change_stockitem')
+    if current is None or not current.is_active:
+        raise PermissionDenied
+    # Native role grants may supplement Django permissions. Refresh only their
+    # request-local cache entries to avoid retaining a grant after revocation.
+    for role, tables in get_ruleset_models().items():
+        if 'stock_stockitem' in tables:
+            InvenTree.cache.set_session_cache(f'role_{current.pk}_{role}_change', None)
+    InvenTree.cache.set_session_cache(
+        f'permission_{current.pk}_stock.change_stockitem', None
+    )
+    if not check_user_permission(
+        current, StockItem, 'change', groups=prefetch_rule_sets(current)
+    ):
+        raise PermissionDenied
+    return current
+
+
+def _ownership(user, location, items=()):
+    location = StockLocation.objects.get(pk=location.pk)
+    items = list(items)
+    for item in items:
+        item.refresh_from_db(fields=['owner', 'location'])
+    if not location.check_ownership(user) or any(
+        not item.check_ownership(user) for item in items
     ):
         raise PermissionDenied
 
@@ -35,10 +58,11 @@ def _snapshot(item):
 @transaction.atomic
 def open_count(location, user):
     """Freeze one location; serialized units require their native separate flow."""
-    _authorize(user)
+    user = _authorize(user)
     items = list(
         StockItem.objects.select_for_update().filter(location=location).order_by('pk')
     )
+    _ownership(user, location, items)
     if not items or any(item.serialized or not item.in_stock for item in items):
         raise CountConflictError(
             'First slice requires nonserialized stock in one location'
@@ -51,10 +75,16 @@ def open_count(location, user):
 @transaction.atomic
 def observe_count(session_id, user, item_id, quantity, command_id, expected_revision):
     """Capture a blind observation; same command replays, changed payload conflicts."""
-    _authorize(user)
+    user = _authorize(user)
     session = CycleCountSession.objects.select_for_update().get(pk=session_id)
     if session.requester_id != user.pk:
         raise PermissionDenied
+    current_scope = list(
+        StockItem.objects.filter(pk__in=[row['item'] for row in session.scope])
+    )
+    if len(current_scope) != len(session.scope):
+        raise CountConflictError('Frozen stock no longer exists; recount required')
+    _ownership(user, session.location, current_scope)
     if not isinstance(command_id, str) or not 1 <= len(command_id) <= 128:
         raise CountConflictError('Invalid command identity')
     item_id = str(item_id)
@@ -67,6 +97,10 @@ def observe_count(session_id, user, item_id, quantity, command_id, expected_revi
         raise CountConflictError('Count revision conflict')
     if item_id not in {row['item'] for row in session.scope}:
         raise CountConflictError('Item is outside frozen scope')
+    item = StockItem.objects.filter(pk=item_id).first()
+    if item is None:
+        raise CountConflictError('Frozen stock no longer exists; recount required')
+    _ownership(user, session.location, [item])
     if item_id in session.observations:
         raise CountConflictError(
             'Recount requires a new session preserving original evidence'
@@ -113,14 +147,28 @@ def request_count_review(
     approval_creator=None,
 ):
     """Freeze completed evidence through a trusted server C03 producer adapter."""
-    _authorize(user)
+    user = _authorize(user)
     session = CycleCountSession.objects.select_for_update().get(pk=session_id)
     if session.requester_id != user.pk:
         raise PermissionDenied
+    items = list(
+        StockItem.objects.select_for_update()
+        .filter(pk__in=[row['item'] for row in session.scope])
+        .order_by('pk')
+    )
+    if len(items) != len(session.scope):
+        raise CountConflictError('Frozen stock no longer exists; recount required')
+    _ownership(user, session.location, items)
     if session.state != 'OPEN' or session.revision != expected_revision:
         raise CountConflictError('Count revision conflict')
     if len(session.observations) != len(session.scope):
         raise CountConflictError('Every frozen item requires an observation')
+    by_id = {str(item.pk): item for item in items}
+    for row in session.scope:
+        item = by_id[row['item']]
+        if item.serialized or not item.in_stock:
+            raise CountConflictError('Stock eligibility changed; recount required')
+        variance(row, session.observations[row['item']], _snapshot(item))
     if approval_creator is None:
         raise CountConflictError('Authoritative approval dependency unavailable')
     request_id = approval_creator(
@@ -150,10 +198,11 @@ def commit_count(
     resolve current C03 authority and return True only after independent approval,
     permission, expiry and exact binding checks. No adapter means fail closed.
     """
-    _authorize(user)
+    user = _authorize(user)
     session = CycleCountSession.objects.select_for_update().get(pk=session_id)
     if session.requester_id == user.pk:
         raise PermissionDenied
+    _ownership(user, session.location)
     if not isinstance(command_id, str) or not 1 <= len(command_id) <= 128:
         raise CountConflictError('Invalid command identity')
     binding = _binding(session, tenant_id, environment, policy_version)
@@ -163,7 +212,13 @@ def commit_count(
             session.committed_command == command_id
             and session.commands.get(command_id) == command_payload
         ):
-            return session
+            # A replay receipt must not re-expose frozen quantities or evidence
+            # for items whose ownership may have changed after commit.
+            return {
+                'sessionId': session.pk,
+                'state': session.state,
+                'commandId': command_id,
+            }
         raise CountConflictError('Count already committed')
     if command_id in session.commands:
         raise CountConflictError('Command payload conflict')
@@ -178,6 +233,7 @@ def commit_count(
     )
     if len(items) != len(session.scope):
         raise CountConflictError('Frozen stock no longer exists; recount required')
+    _ownership(user, session.location, items)
     by_id = {str(item.pk): item for item in items}
     targets = []
     for row in session.scope:
@@ -191,6 +247,8 @@ def commit_count(
         is not True
     ):
         raise CountConflictError('Count is not independently approved')
+    user = _authorize(user)
+    _ownership(user, session.location, items)
     for item, count in targets:
         item.stocktake(
             count, user, notes=f'Cycle count {session.pk}, command {command_id}'
@@ -199,4 +257,4 @@ def commit_count(
     session.committed_command = command_id
     session.commands[command_id] = command_payload
     session.save()
-    return session
+    return {'sessionId': session.pk, 'state': session.state, 'commandId': command_id}

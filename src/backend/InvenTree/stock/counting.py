@@ -21,7 +21,7 @@ def quantity_text(value):
         quantity = Decimal(value)
     except InvalidOperation as error:
         raise CountConflictError('Invalid quantity') from error
-    if not quantity.is_finite() or quantity < 0 or quantity >= Decimal('1e14'):
+    if not quantity.is_finite() or quantity < 0 or quantity >= Decimal('1e10'):
         raise CountConflictError('Quantity is outside native limits')
     if quantity != quantity.quantize(Decimal('0.00001')):
         raise CountConflictError('Quantity exceeds native precision')
