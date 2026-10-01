@@ -54,6 +54,12 @@ class CountApiTests(TestCase):
         )
 
     def _request(self):
+        locations = self.client.get(reverse('api-cycle-count-open'))
+        self.assertEqual(locations.status_code, 200)
+        self.assertEqual(
+            locations.data['locations'],
+            [{'id': self.location.pk, 'name': self.location.name}],
+        )
         opened = self._post('api-cycle-count-open', {'location_id': self.location.pk})
         self.assertEqual(opened.status_code, 201)
         self.pk = opened.data['sessionId']
@@ -146,6 +152,14 @@ class CountApiTests(TestCase):
         ack = self._post('api-cycle-count-request', self.payload, self.pk)
         self.assertEqual(ack.status_code, 200)
         self.assertEqual(ack.data['state'], 'CONSUMED')
+        retained = self.client.get(
+            reverse('api-cycle-count-observe', kwargs={'pk': self.pk})
+        )
+        self.assertEqual(retained.data['review']['state'], 'CONSUMED')
+        self.assertEqual(
+            set(retained.data['review']),
+            {'requestId', 'state', 'revision', 'expiresAt'},
+        )
         self.item.refresh_from_db()
         self.assertEqual(str(self.item.quantity), '8.50000')
         self.assertEqual(self.item.tracking_info.count(), tracking + 1)

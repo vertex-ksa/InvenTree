@@ -2,6 +2,7 @@
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.utils import timezone
 
 from stock.counting import CountConflictError
 from stock.counting_service import (
@@ -9,7 +10,7 @@ from stock.counting_service import (
     _ownership,
     _require_material_scope,
 )
-from stock.models import CycleCountSession, StockItem
+from stock.models import CycleCountApproval, CycleCountSession, StockItem
 
 
 @transaction.atomic
@@ -29,10 +30,23 @@ def observer_record(session_id, user):
         raise CountConflictError('Count scope is unavailable')
     _ownership(user, session.location, items)
     frozen = {row['item']: row for row in session.scope}
+    approval = CycleCountApproval.objects.filter(session=session).first()
+    review = None
+    if approval:
+        state = approval.state
+        if state in ('PENDING', 'APPROVED') and approval.expires_at <= timezone.now():
+            state = 'EXPIRED'
+        review = {
+            'requestId': approval.pk,
+            'state': state,
+            'revision': approval.revision,
+            'expiresAt': approval.expires_at.isoformat(),
+        }
     return {
         'sessionId': session.pk,
         'state': session.state,
         'revision': session.revision,
+        'review': review,
         'location': {'id': session.location_id, 'name': session.location.name},
         'items': [
             {

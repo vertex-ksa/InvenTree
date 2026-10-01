@@ -29,6 +29,7 @@ from stock.counting_approval import (
 )
 from stock.counting_records import observer_record
 from stock.counting_service import (
+    _authorize_observer,
     _require_material_scope,
     _snapshot,
     observe_count,
@@ -176,6 +177,23 @@ class CountView(APIView):
 class CountOpen(CountView):
     """Start a masked count without stock read or stock mutation grants."""
 
+    def get(self, request):
+        """List ownership-scoped location labels without inventory balances."""
+        installation_policy()
+        actor = _authorize_observer(request.user, 'add')
+        locations = list(StockLocation.objects.order_by('name', 'pk')[:1001])
+        if len(locations) > 1000:
+            raise CountConflictError('Count location selection capacity exceeded')
+        return Response(
+            {
+                'locations': [
+                    {'id': location.pk, 'name': location.name}
+                    for location in locations
+                    if location.check_ownership(actor)
+                ]
+            }
+        )
+
     def post(self, request):
         """Apply current native permissions and trusted server policy."""
         installation_policy()
@@ -294,7 +312,7 @@ class CountReview(CountView):
                     _snapshot(by_id[row['item']]),
                 )
             except CountConflictError:
-                stale = True
+                stale = session.state != 'COMMITTED'
         return Response(
             {
                 'sessionId': pk,

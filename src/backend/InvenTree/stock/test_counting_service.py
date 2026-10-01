@@ -418,7 +418,8 @@ class NativeCountTests(TestCase):
         record = observer_record(self.session.pk, self.counter)
         self.assertEqual(record['items'][0]['observed'], '8.50000')
         self.assertEqual(
-            set(record), {'sessionId', 'state', 'revision', 'location', 'items'}
+            set(record),
+            {'sessionId', 'state', 'revision', 'review', 'location', 'items'},
         )
         self.assertEqual(
             set(record['items'][0]),
