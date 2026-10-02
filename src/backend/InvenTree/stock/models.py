@@ -79,6 +79,35 @@ class CycleCountSession(models.Model):
         verbose_name = _('Cycle Count Session')
 
 
+class CycleCountABCPolicy(models.Model):
+    """Immutable economic proposal with independent native policy decisions."""
+
+    location = models.ForeignKey('stock.StockLocation', on_delete=models.PROTECT)
+    requester = models.ForeignKey(User, on_delete=models.PROTECT, related_name='+')
+    reviewer = models.ForeignKey(User, on_delete=models.PROTECT, related_name='+')
+    request_key = models.CharField(max_length=64, unique=True)
+    proposal_hash = models.CharField(max_length=64)
+    binding = models.JSONField(default=dict)
+    policy = models.JSONField(default=dict)
+    annual_usage_values = models.JSONField(default=dict)
+    source_reference = models.CharField(max_length=255)
+    source_qualification = models.CharField(
+        max_length=64, default='OPERATOR_INPUT_NOT_NATIVE_INGESTION'
+    )
+    state = models.CharField(max_length=16, default='PENDING')
+    revision = models.PositiveIntegerField(default=0)
+    commands = models.JSONField(default=dict)
+    decision_history = models.JSONField(default=list)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        """Planning and independent approval require dedicated native grants."""
+
+        permissions = [
+            ('approve_cyclecountabcpolicy', 'Approve an independent ABC count policy')
+        ]
+
+
 class CycleCountApproval(models.Model):
     """Standalone approval authority, locked with its native count transaction."""
 

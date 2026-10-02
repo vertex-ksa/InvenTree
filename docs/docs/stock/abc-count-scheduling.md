@@ -35,6 +35,38 @@ the exact policy, as-of date and resulting material proposal. Native monetary
 source reconciliation, persisted governed policy editing and automatic task
 creation remain separate work; this proposal grants no adjustment authority.
 
+## Persisted manual-source policy governance
+
+`POST /api/stock/cycle-count/abc-policy/` creates an immutable candidate with
+`location_id`, `policy`, `annual_usage_values`, `source_reference`, and a retained
+`command_id`. The planner needs current stock read/change plus the dedicated
+native add-policy grant. The server selects the independent reviewer from the
+existing installation policy; callers cannot choose reviewer or deployment.
+The reviewer needs both count approval and the dedicated ABC-policy approval
+grant, and cannot approve a proposal they created. Decisions use independent
+`expected_revision`, `decision`, `reason`, and `command_id` at
+`POST /api/stock/cycle-count/abc-policy/<id>/`. Revocation remains available.
+
+Native material identity, units, revision, location and deployment policy bind
+the proposal. Editing economic evidence requires a new candidate; a retained
+identity with changed payload conflicts. Approval records manual source review.
+The source remains explicitly `OPERATOR_INPUT_NOT_NATIVE_INGESTION`; there is no
+automatic annual usage ingestion, provider qualification or stock authority.
+
+`GET /api/stock/cycle-count/abc-policy/context/<location>/` returns current
+permissioned planner/reviewer metadata and scoped policy selections.
+`GET /api/stock/cycle-count/abc-policy/<id>/schedule/` requires current valid
+APPROVED evidence and derives freshness from native per-unit count history.
+It creates neither counts nor adjustments. Automatic task creation remains off.
+
+Unknown outcomes are resolved through native reads:
+`GET /api/stock/cycle-count/abc-policy/?command_id=<retained-id>` recognizes the
+current planner's exact saved proposal identity. For decisions,
+`GET /api/stock/cycle-count/abc-policy/<id>/?command_id=<retained-id>` returns the
+recorded decision separately from current state. A previously recorded approval
+can therefore be recognized while the current policy is REVOKED. These reads
+never resubmit a command. Missing or denied lookup does not authorize dispatch.
+
 Run `manage.py test stock.test_counting_api stock.test_counting_abc
 stock.test_counting_policy` for current actor, ownership, exact arithmetic and
 schedule regressions. Existing native count approval and commit remain separate.

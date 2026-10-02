@@ -19,9 +19,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from InvenTree.helpers import current_date
 from InvenTree.status_codes import StockHistoryCode
 from stock.counting import CountConflictError, evidence_hash, variance
 from stock.counting_abc import abc_count_schedule
+from stock.counting_abc_governance import (
+    abc_policy_context,
+    approved_abc_schedule,
+    decide_abc_policy,
+    lookup_abc_decision,
+    lookup_abc_proposal,
+    propose_abc_policy,
+    read_abc_policy,
+)
 from stock.counting_approval import (
     _decision_actor,
     _exact,
@@ -120,6 +130,16 @@ class OpenInput(StrictInput):
     """An authorized native location is the complete first-slice scope."""
 
     location_id = serializers.IntegerField(min_value=1)
+
+
+class ABCPolicyInput(StrictInput):
+    """Economic proposal fields cannot override server approval authority."""
+
+    location_id = serializers.IntegerField(min_value=1)
+    policy = serializers.JSONField()
+    annual_usage_values = serializers.JSONField()
+    source_reference = serializers.CharField(max_length=255, trim_whitespace=False)
+    command_id = serializers.CharField(max_length=128, trim_whitespace=False)
 
 
 class CommandInput(StrictInput):
@@ -362,6 +382,100 @@ class CountReview(CountView):
         )
 
 
+class CountABCPolicyContext(CountView):
+    """Native current planner or reviewer scope, no stock balance projection."""
+
+    def get(self, request, pk):
+        """Authorize current economic grants and native object ownership."""
+        if request.query_params:
+            raise serializers.ValidationError('Unexpected policy context fields.')
+        return Response(abc_policy_context(pk, request.user, installation_policy()))
+
+
+class CountABCPolicySchedule(CountView):
+    """Only currently valid independently approved policy schedules."""
+
+    def get(self, request, pk):
+        """Read native count history without opening a count or adjusting stock."""
+        if request.query_params:
+            raise serializers.ValidationError('Unexpected policy schedule fields.')
+        return Response(approved_abc_schedule(pk, request.user, installation_policy()))
+
+
+class CountABCPolicyCreate(CountView):
+    """Default-disabled permissioned planner proposal boundary."""
+
+    def get(self, request):
+        """Look up a retained operation for the current authenticated planner."""
+        deployment = installation_policy()
+        if (
+            set(request.query_params) != {'command_id'}
+            or len(request.query_params.getlist('command_id')) != 1
+        ):
+            raise serializers.ValidationError(
+                'An exact retained command reference is required.'
+            )
+        return Response(
+            lookup_abc_proposal(
+                request.user, request.query_params['command_id'], deployment
+            )
+        )
+
+    def post(self, request):
+        """Persist exactly one native manual-source proposal identity."""
+        deployment = installation_policy()
+        data = self.command(ABCPolicyInput)
+        return Response(
+            propose_abc_policy(
+                data['location_id'],
+                request.user,
+                data['policy'],
+                data['annual_usage_values'],
+                data['source_reference'],
+                data['command_id'],
+                deployment,
+            )
+        )
+
+
+class CountABCPolicyRecord(CountView):
+    """Current actor read and independent native revision-bound decisions."""
+
+    def get(self, request, pk):
+        """Revalidate current permissions and frozen native material scope."""
+        deployment = installation_policy()
+        if request.query_params:
+            if (
+                set(request.query_params) != {'command_id'}
+                or len(request.query_params.getlist('command_id')) != 1
+            ):
+                raise serializers.ValidationError(
+                    'An exact retained command reference is required.'
+                )
+            return Response(
+                lookup_abc_decision(
+                    pk, request.user, request.query_params['command_id'], deployment
+                )
+            )
+        return Response(read_abc_policy(pk, request.user, deployment))
+
+    def post(self, request, pk):
+        """Record explicit manual-source review without changing stock."""
+        deployment = installation_policy()
+        data = self.command(DecisionInput)
+        return Response(
+            decide_abc_policy(
+                pk,
+                request.user,
+                data['expected_revision'],
+                data['decision'],
+                data['reason'],
+                data['command_id'],
+                deployment,
+            )
+        )
+
+
 class CountABCSchedule(CountView):
     """Read-only reviewer proposal from explicit trusted location economics."""
 
@@ -420,7 +534,7 @@ class CountABCSchedule(CountView):
                     'lastCountDate': last,
                 }
             )
-        proposal = abc_count_schedule(materials, config['policy'], timezone.localdate())
+        proposal = abc_count_schedule(materials, config['policy'], current_date())
         return Response(
             {
                 'locationId': pk,
@@ -451,6 +565,26 @@ class CountCommit(CountView):
 
 
 urlpatterns = [
+    path(
+        'abc-policy/context/<int:pk>/',
+        CountABCPolicyContext.as_view(),
+        name='api-cycle-count-abc-policy-context',
+    ),
+    path(
+        'abc-policy/<int:pk>/schedule/',
+        CountABCPolicySchedule.as_view(),
+        name='api-cycle-count-abc-policy-schedule',
+    ),
+    path(
+        'abc-policy/',
+        CountABCPolicyCreate.as_view(),
+        name='api-cycle-count-abc-policy-create',
+    ),
+    path(
+        'abc-policy/<int:pk>/',
+        CountABCPolicyRecord.as_view(),
+        name='api-cycle-count-abc-policy-record',
+    ),
     path('abc/<int:pk>/', CountABCSchedule.as_view(), name='api-cycle-count-abc'),
     path('', CountOpen.as_view(), name='api-cycle-count-open'),
     path('<int:pk>/', CountObserve.as_view(), name='api-cycle-count-observe'),
