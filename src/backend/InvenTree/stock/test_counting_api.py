@@ -1,13 +1,17 @@
 """Native session-authenticated blind-count API role and policy boundaries."""
 
+from datetime import timedelta
+
 from django.contrib.auth.models import Permission, User
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from rest_framework.test import APIClient
 
+from InvenTree.status_codes import StockHistoryCode
 from part.models import Part
-from stock.models import CycleCountApproval, StockItem, StockLocation
+from stock.models import CycleCountApproval, StockItem, StockItemTracking, StockLocation
 
 
 @override_settings(USE_TZ=True)
@@ -52,6 +56,102 @@ class CountApiTests(TestCase):
         return self.client.post(
             reverse(route, kwargs={'pk': pk} if pk else None), payload, format='json'
         )
+
+    def test_abc_reviewer_proposal_is_read_only_and_currently_authorized(self):
+        """Counters cannot read economics; proposals neither count nor move stock."""
+        policy = {
+            'version': 'approved-abc-1',
+            'currency': 'SAR',
+            'period': '2026',
+            'aShare': '0.8',
+            'bShare': '0.95',
+            'intervalDays': {'A': 30, 'B': 90, 'C': 365},
+        }
+        configured = {
+            str(self.location.pk): {
+                'policy': policy,
+                'annualUsageValues': {str(self.item.part_id): '100.00000001'},
+            }
+        }
+        route = reverse('api-cycle-count-abc', kwargs={'pk': self.location.pk})
+        with override_settings(COUNT_ABC_POLICIES=configured):
+            self.assertEqual(self.client.get(route).status_code, 403)
+            self.client.force_login(self.other)
+            self.assertEqual(self.client.get(route).status_code, 403)
+            self.client.force_login(self.reviewer)
+            response = self.client.get(route)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response.data['proposal']['totalUsageValue'], '100.00000001'
+            )
+            self.assertEqual(response.data['proposal']['materials'][0]['due'], 'YES')
+            self.assertEqual(response.data['proposal']['stockEffect'], 'NONE')
+            self.item.refresh_from_db()
+            self.assertEqual(str(self.item.quantity), '10.00000')
+            self.assertFalse(CycleCountApproval.objects.exists())
+            self.reviewer.is_active = False
+            self.reviewer.save()
+            self.assertIn(self.client.get(route).status_code, (401, 403))
+
+    def test_abc_missing_or_changed_scope_fails_closed(self):
+        """No inferred economic defaults or partial denominator is permitted."""
+        self.client.force_login(self.reviewer)
+        route = reverse('api-cycle-count-abc', kwargs={'pk': self.location.pk})
+        self.assertEqual(self.client.get(route).status_code, 404)
+        with override_settings(
+            COUNT_ABC_POLICIES={
+                str(self.location.pk): {'policy': {}, 'annualUsageValues': {}}
+            }
+        ):
+            self.assertEqual(self.client.get(route).status_code, 409)
+        with override_settings(COUNT_REVIEW_POLICY=None):
+            self.assertEqual(self.client.get(route).status_code, 404)
+
+    def test_abc_uses_oldest_current_unit_count_and_never_infers_missing_history(self):
+        """A fresh unit must not hide another unit's overdue count."""
+        other = StockItem.objects.create(
+            part=self.item.part, location=self.location, quantity=3
+        )
+        recent = StockItemTracking.objects.create(
+            item=self.item, tracking_type=StockHistoryCode.STOCK_COUNT
+        )
+        old = StockItemTracking.objects.create(
+            item=other, tracking_type=StockHistoryCode.STOCK_COUNT
+        )
+        StockItemTracking.objects.filter(pk=old.pk).update(
+            date=timezone.now() - timedelta(days=45)
+        )
+        StockItemTracking.objects.filter(pk=recent.pk).update(
+            date=timezone.now() - timedelta(days=1)
+        )
+        policy = {
+            'version': 'approved-abc-1',
+            'currency': 'SAR',
+            'period': '2026',
+            'aShare': '0.8',
+            'bShare': '0.95',
+            'intervalDays': {'A': 30, 'B': 90, 'C': 365},
+        }
+        config = {
+            str(self.location.pk): {
+                'policy': policy,
+                'annualUsageValues': {str(self.item.part_id): '100'},
+            }
+        }
+        self.client.force_login(self.reviewer)
+        route = reverse('api-cycle-count-abc', kwargs={'pk': self.location.pk})
+        with override_settings(COUNT_ABC_POLICIES=config):
+            response = self.client.get(route)
+            self.assertEqual(response.status_code, 200)
+            row = response.data['proposal']['materials'][0]
+            self.assertEqual(row['due'], 'YES')
+            self.assertLess(row['nextCountDate'], timezone.localdate().isoformat())
+            StockItemTracking.objects.filter(pk=old.pk).delete()
+            response = self.client.get(route)
+            self.assertEqual(
+                response.data['proposal']['materials'][0]['nextCountDate'],
+                timezone.localdate().isoformat(),
+            )
 
     def _request(self):
         locations = self.client.get(reverse('api-cycle-count-open'))

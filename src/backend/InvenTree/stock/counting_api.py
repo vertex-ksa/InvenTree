@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.db import transaction
+from django.db.models import Max
 from django.http import HttpResponseNotFound
 from django.urls import path
 from django.utils import timezone
@@ -18,7 +19,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from InvenTree.status_codes import StockHistoryCode
 from stock.counting import CountConflictError, evidence_hash, variance
+from stock.counting_abc import abc_count_schedule
 from stock.counting_approval import (
     _decision_actor,
     _exact,
@@ -30,12 +33,19 @@ from stock.counting_approval import (
 from stock.counting_records import observer_record
 from stock.counting_service import (
     _authorize_observer,
+    _ownership,
     _require_material_scope,
     _snapshot,
     observe_count,
     open_count,
 )
-from stock.models import CycleCountApproval, CycleCountSession, StockLocation
+from stock.models import (
+    CycleCountApproval,
+    CycleCountSession,
+    StockItem,
+    StockItemTracking,
+    StockLocation,
+)
 
 
 class CountConflict(APIException):
@@ -352,6 +362,75 @@ class CountReview(CountView):
         )
 
 
+class CountABCSchedule(CountView):
+    """Read-only reviewer proposal from explicit trusted location economics."""
+
+    @transaction.atomic
+    def get(self, request, pk):
+        """Verify current native authority before reading economic evidence."""
+        deployment = installation_policy()
+        actor = _decision_actor(request.user)
+        if actor.pk != deployment['reviewerId']:
+            raise PermissionDenied
+        configurations = getattr(settings, 'COUNT_ABC_POLICIES', None)
+        if not isinstance(configurations, dict) or str(pk) not in configurations:
+            raise NotFound('ABC policy is not configured.')
+        config = configurations[str(pk)]
+        if not isinstance(config, dict) or set(config) != {
+            'policy',
+            'annualUsageValues',
+        }:
+            raise CountPolicyUnavailable
+        location = StockLocation.objects.get(pk=pk)
+        items = list(
+            StockItem.objects.select_for_update()
+            .filter(location=location)
+            .order_by('pk')
+        )
+        _ownership(actor, location, items)
+        if any(not item.in_stock for item in items):
+            raise CountConflictError('Location stock scope is not eligible')
+        values = config['annualUsageValues']
+        parts = {str(item.part_id) for item in items}
+        if not isinstance(values, dict) or set(values) != parts:
+            raise CountConflictError(
+                'ABC economic scope differs from current native materials'
+            )
+        latest = dict(
+            StockItemTracking.objects.filter(
+                item_id__in=[item.pk for item in items],
+                tracking_type=StockHistoryCode.STOCK_COUNT,
+            )
+            .values('item_id')
+            .annotate(last=Max('date'))
+            .values_list('item_id', 'last')
+        )
+        materials = []
+        for part_id in sorted(parts, key=int):
+            dates = [
+                latest.get(item.pk) for item in items if str(item.part_id) == part_id
+            ]
+            # Every current stock unit must have count evidence; using only the
+            # latest unit would falsely mark older or never-counted units fresh.
+            last = min(dates).date().isoformat() if dates and all(dates) else None
+            materials.append(
+                {
+                    'partId': part_id,
+                    'annualUsageValue': values[part_id],
+                    'lastCountDate': last,
+                }
+            )
+        proposal = abc_count_schedule(materials, config['policy'], timezone.localdate())
+        return Response(
+            {
+                'locationId': pk,
+                'itemIds': [item.pk for item in items],
+                'source': 'TRUSTED_SERVER_ANNUAL_USAGE_NATIVE_COUNT_HISTORY',
+                'proposal': proposal,
+            }
+        )
+
+
 class CountCommit(CountView):
     """A separate explicit command consumes native approval and adjusts stock."""
 
@@ -372,6 +451,7 @@ class CountCommit(CountView):
 
 
 urlpatterns = [
+    path('abc/<int:pk>/', CountABCSchedule.as_view(), name='api-cycle-count-abc'),
     path('', CountOpen.as_view(), name='api-cycle-count-open'),
     path('<int:pk>/', CountObserve.as_view(), name='api-cycle-count-observe'),
     path('<int:pk>/request/', CountRequest.as_view(), name='api-cycle-count-request'),

@@ -99,6 +99,7 @@ AUTO_UPDATE = get_boolean_setting('INVENTREE_AUTO_UPDATE', 'auto_update', False)
 # Explicit trusted installation policy only; absent configuration disables every
 # cycle-count API verb. Public requests cannot select identity or authority.
 COUNT_REVIEW_POLICY = get_setting(config_key='count_review_policy', default_value=None)
+COUNT_ABC_POLICIES = get_setting(config_key='count_abc_policies', default_value=None)
 
 # Configure logging settings
 LOG_LEVEL = get_setting('INVENTREE_LOG_LEVEL', 'log_level', 'WARNING')
