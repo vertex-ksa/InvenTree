@@ -2840,7 +2840,38 @@ class SalesOrderShipment(
         customer = order.customer
 
         # Preselect related fields to avoid per-row database queries below
-        allocations = allocations.select_related('line', 'item', 'item__part')
+        allocations = list(allocations.select_related('line', 'item', 'item__part'))
+        # Re-read current stock under stable row locks at actual dispatch, not
+        # merely when the asynchronous shipment was requested or allocated.
+        current_stock = {
+            item.pk: item
+            for item in stock.models.StockItem.objects.select_for_update()
+            .select_related('part')
+            .filter(pk__in={allocation.item_id for allocation in allocations})
+            .order_by('pk')
+        }
+        if any(not item.in_stock for item in current_stock.values()):
+            raise ValidationError(
+                _('Allocated stock is no longer available for shipment')
+            )
+        requested_by_item = {}
+        for allocation in allocations:
+            if allocation.quantity <= 0:
+                raise ValidationError(_('Shipment quantity must be positive'))
+            requested_by_item[allocation.item_id] = (
+                requested_by_item.get(allocation.item_id, Decimal(0))
+                + allocation.quantity
+            )
+        if any(
+            quantity > current_stock[item_id].quantity
+            for item_id, quantity in requested_by_item.items()
+        ):
+            raise ValidationError(
+                _('Allocated quantity exceeds current available stock')
+            )
+        if not get_global_setting('STOCK_ALLOW_EXPIRED_SALE', cache=False):
+            if any(item.is_expired() for item in current_stock.values()):
+                raise ValidationError(_('Expired stock cannot be shipped'))
 
         split_items = []  # (source_item, new_item, quantity) - stock to split off
         shipped_items = []  # (target_item, quantity) - stock to mark as shipped
@@ -2856,7 +2887,10 @@ class SalesOrderShipment(
         allocations_to_update = []
 
         for allocation in allocations:
-            stock_item = seen_stock_items.get(allocation.item_id) or allocation.item
+            stock_item = (
+                seen_stock_items.get(allocation.item_id)
+                or current_stock[allocation.item_id]
+            )
             quantity = allocation.quantity
 
             seen_stock_items[stock_item.pk] = stock_item
@@ -2973,10 +3007,15 @@ class SalesOrderShipment(
                 )
             )
 
-            customer_events.append((
-                (),
-                {'id': target_item.pk, 'customer': customer.pk if customer else None},
-            ))
+            customer_events.append(
+                (
+                    (),
+                    {
+                        'id': target_item.pk,
+                        'customer': customer.pk if customer else None,
+                    },
+                )
+            )
 
         # Flush all StockItem field changes (quantity reductions, and shipment details)
         stock.models.StockItem.objects.bulk_update(

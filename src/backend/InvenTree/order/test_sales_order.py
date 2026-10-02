@@ -37,7 +37,7 @@ from order.serializers import SalesOrderShipmentAllocationSerializer
 from part.models import Part
 from stock.events import StockEvents
 from stock.models import StockItem, StockItemTracking, StockLocation
-from stock.status_codes import StockHistoryCode
+from stock.status_codes import StockHistoryCode, StockStatus
 from users.models import Owner
 
 
@@ -215,6 +215,100 @@ class SalesOrderTest(InvenTreeAPITestCase):
             allocation.item.refresh_from_db()
             self.assertEqual(allocation.item.sales_order, self.order)
             self.assertEqual(allocation.item.customer, self.order.customer)
+
+    def test_dispatch_rechecks_expiry_before_any_stock_effect(self):
+        """Expired stock at dispatch rejects the complete batch atomically."""
+        self.allocate_stock(True)
+        set_global_setting('STOCK_ALLOW_EXPIRED_SALE', False)
+        StockItem.objects.filter(pk=self.Sb.pk).update(
+            expiry_date=datetime.now().date() - timedelta(days=1)
+        )
+        before_tracking = StockItemTracking.objects.count()
+        before_stock = list(
+            StockItem.objects.values_list(
+                'pk', 'quantity', 'sales_order_id', 'customer_id'
+            )
+        )
+        with self.assertRaises(ValidationError):
+            self.shipment.complete_allocations(self.shipment.allocations.all())
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.shipped, 0)
+        self.assertEqual(before_tracking, StockItemTracking.objects.count())
+        self.assertEqual(
+            before_stock,
+            list(
+                StockItem.objects.values_list(
+                    'pk', 'quantity', 'sales_order_id', 'customer_id'
+                )
+            ),
+        )
+
+    def test_dispatch_preserves_native_expiry_day_and_explicit_override(self):
+        """Today remains eligible; an explicit native override permits past expiry."""
+        self.allocate_stock(True)
+        set_global_setting('STOCK_ALLOW_EXPIRED_SALE', False)
+        StockItem.objects.filter(pk=self.Sa.pk).update(
+            expiry_date=datetime.now().date()
+        )
+        self.shipment.complete_allocations(
+            self.shipment.allocations.filter(item_id=self.Sa.pk)
+        )
+        StockItem.objects.filter(pk=self.Sb.pk).update(
+            expiry_date=datetime.now().date() - timedelta(days=1)
+        )
+        set_global_setting('STOCK_ALLOW_EXPIRED_SALE', True)
+        self.shipment.complete_allocations(
+            self.shipment.allocations.filter(item_id=self.Sb.pk)
+        )
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.shipped, 50)
+
+    def test_shipment_worker_rejects_stock_expired_after_submission(self):
+        """A delayed worker cannot rely on eligibility at request time."""
+        self.allocate_stock(True)
+        set_global_setting('STOCK_ALLOW_EXPIRED_SALE', False)
+        self.assertTrue(self.shipment.check_can_complete())
+        StockItem.objects.filter(pk=self.Sa.pk).update(
+            expiry_date=datetime.now().date() - timedelta(days=1)
+        )
+        with self.assertRaises(ValidationError):
+            order.tasks.complete_sales_order_shipment(
+                self.shipment.pk, self.user.pk, None
+            )
+        self.shipment.refresh_from_db()
+        self.line.refresh_from_db()
+        self.assertIsNone(self.shipment.shipment_date)
+        self.assertEqual(self.line.shipped, 0)
+
+    def test_shipment_worker_rejects_quarantine_after_allocation(self):
+        """A later NCR quarantine blocks every allocation in the shipment."""
+        self.allocate_stock(True)
+        StockItem.objects.filter(pk=self.Sb.pk).update(
+            status=StockStatus.QUARANTINED.value
+        )
+        before_stock = StockItem.objects.count()
+        before_tracking = StockItemTracking.objects.count()
+        with self.assertRaises(ValidationError):
+            order.tasks.complete_sales_order_shipment(
+                self.shipment.pk, self.user.pk, None
+            )
+        self.shipment.refresh_from_db()
+        self.line.refresh_from_db()
+        self.assertIsNone(self.shipment.shipment_date)
+        self.assertEqual(self.line.shipped, 0)
+        self.assertEqual(StockItem.objects.count(), before_stock)
+        self.assertEqual(StockItemTracking.objects.count(), before_tracking)
+
+    def test_dispatch_rejects_stock_reduced_after_allocation(self):
+        """Current stock quantity bounds the exact dispatched batch."""
+        self.allocate_stock(True)
+        StockItem.objects.filter(pk=self.Sb.pk).update(quantity=20)
+        before_tracking = StockItemTracking.objects.count()
+        with self.assertRaises(ValidationError):
+            self.shipment.complete_allocations(self.shipment.allocations.all())
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.shipped, 0)
+        self.assertEqual(StockItemTracking.objects.count(), before_tracking)
 
     def test_over_allocate(self):
         """Test that over allocation logic works."""
