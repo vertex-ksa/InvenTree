@@ -2849,8 +2849,8 @@ class SalesOrderShipment(
         # allocations may draw from the same StockItem, so track running state
         seen_stock_items: dict = {}
 
-        # Track the lines which have already been processed, to avoid double counting
-        seen_lines: dict = {}
+        # Aggregate exact increments; cached line totals may be stale in another worker.
+        shipped_by_line: dict = {}
 
         # Allocations whose 'item' now points at a newly-split-off StockItem
         allocations_to_update = []
@@ -2888,9 +2888,9 @@ class SalesOrderShipment(
             shipped_items.append((target_item, quantity))
 
             # Increase the "shipped" quantity for the associated line
-            line = seen_lines.get(allocation.line_id) or allocation.line
-            line.shipped += quantity
-            seen_lines[line.pk] = line
+            shipped_by_line[allocation.line_id] = (
+                shipped_by_line.get(allocation.line_id, Decimal(0)) + quantity
+            )
 
         # Nothing to do?
         if not seen_stock_items:
@@ -2988,8 +2988,12 @@ class SalesOrderShipment(
 
         stock.models.StockItemTracking.objects.bulk_create(tracking_entries)
 
-        # Update sales order lines for "seen_lines"
-        SalesOrderLineItem.objects.bulk_update(seen_lines.values(), ['shipped'])
+        # Apply increments against current database values, not cached line snapshots.
+        # Stable ordering also avoids opposing line-update order between shipments.
+        for line_id in sorted(shipped_by_line):
+            SalesOrderLineItem.objects.filter(pk=line_id).update(
+                shipped=F('shipped') + shipped_by_line[line_id]
+            )
 
         # Repoint allocations onto their (possibly newly split) StockItem
         if allocations_to_update:

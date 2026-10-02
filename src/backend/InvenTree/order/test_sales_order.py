@@ -2,6 +2,7 @@
 
 import threading
 from datetime import datetime, timedelta
+from decimal import Decimal
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -1320,3 +1321,84 @@ class SalesOrderAllocateStockConcurrencyTest(TransactionTestCase):
 
         self.assertEqual(total_allocated, 5)
         self.assertLessEqual(total_allocated, self.stock_item.quantity)
+
+
+@skipUnlessDBFeature('has_select_for_update')
+class SalesOrderShippedCounterConcurrencyTest(TransactionTestCase):
+    """Different stock and shipments must retain every shared line increment."""
+
+    fixtures = ['users']
+
+    def test_distinct_shipments_increment_shared_line(self):
+        """Synchronize real dispatch after both workers read the same line total."""
+        customer = Company.objects.create(
+            name='Counter concurrency customer', is_customer=True
+        )
+        part = Part.objects.create(name='Counter concurrency part', salable=True)
+        sales_order = SalesOrder.objects.create(
+            customer=customer, reference='SO-COUNTER-CONC'
+        )
+        quantities = (Decimal('2.125'), Decimal('3.875'))
+        line = SalesOrderLineItem.objects.create(
+            order=sales_order, part=part, quantity=sum(quantities)
+        )
+        shipments = []
+        for index, quantity in enumerate(quantities):
+            shipment = SalesOrderShipment.objects.create(
+                order=sales_order, reference=f'COUNTER-{index}'
+            )
+            item = StockItem.objects.create(part=part, quantity=quantity)
+            SalesOrderAllocation.objects.create(
+                shipment=shipment, line=line, item=item, quantity=quantity
+            )
+            shipments.append(shipment.pk)
+
+        barrier = threading.Barrier(2, timeout=5)
+        errors = []
+        manager = StockItemTracking.objects
+        original_bulk_create = manager.bulk_create
+
+        def synchronized_tracking(*args, **kwargs):
+            # Actual stock writes have run and both allocation querysets have
+            # loaded their line snapshots. Keep native tracking persistence.
+            barrier.wait(timeout=5)
+            return original_bulk_create(*args, **kwargs)
+
+        def dispatch(shipment_id):
+            try:
+                shipment = SalesOrderShipment.objects.get(pk=shipment_id)
+                shipment.complete_allocations(shipment.allocations.all())
+            except Exception as exc:
+                errors.append(exc)
+            finally:
+                connection.close()
+
+        threads = [
+            threading.Thread(target=dispatch, args=(shipment_id,))
+            for shipment_id in shipments
+        ]
+        with mock.patch.object(manager, 'bulk_create', synchronized_tracking):
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=10)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertEqual(errors, [])
+        line.refresh_from_db()
+        self.assertEqual(line.shipped, sum(quantities))
+        allocations = SalesOrderAllocation.objects.filter(line=line).select_related(
+            'item'
+        )
+        self.assertEqual(allocations.count(), 2)
+        for allocation in allocations:
+            self.assertEqual(allocation.item.sales_order_id, sales_order.pk)
+            self.assertEqual(allocation.item.customer_id, customer.pk)
+            self.assertEqual(allocation.item.quantity, allocation.quantity)
+        self.assertEqual(
+            StockItemTracking.objects.filter(
+                tracking_type=StockHistoryCode.SHIPPED_AGAINST_SALES_ORDER.value,
+                item__sales_order=sales_order,
+            ).count(),
+            2,
+        )
