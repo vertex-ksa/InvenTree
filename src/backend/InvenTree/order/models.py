@@ -7,7 +7,7 @@ from typing import Any, Optional, TypedDict
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import OperationalError, connections, models, transaction
 from django.db.models import F, Q, QuerySet, Sum
 from django.db.models.base import ModelState
 from django.db.models.functions import Coalesce
@@ -2819,6 +2819,80 @@ class SalesOrderShipment(
 
         return True
 
+    def _lock_dispatch_stock(self, allocations: list) -> dict:
+        """Validate fresh stock for this selected allocation set before any writes.
+
+        Requires the caller's atomic transaction. This is not a membership fence:
+        allocation edits and other writers retain their existing coordination.
+        SQLite checks sequential eligibility only; it provides no row-lock proof.
+        """
+        from stock.models import StockItem
+
+        database = self._state.db or 'default'
+        db = connections[database]
+        if not db.in_atomic_block:
+            raise RuntimeError('Dispatch stock validation requires a transaction')
+
+        demand = {}
+        for allocation in allocations:
+            if allocation.shipment_id != self.pk or allocation.quantity <= 0:
+                raise ValidationError(_('Invalid selected shipment allocation'))
+            demand[allocation.item_id] = (
+                demand.get(allocation.item_id, Decimal(0)) + allocation.quantity
+            )
+
+        # Never add a shipment->stock blocking wait: existing allocation writers
+        # acquire stock first and may subsequently reference this shipment.
+        if (
+            db.features.has_select_for_update
+            and not db.features.has_select_for_update_nowait
+        ):
+            raise ValidationError(_('Safe non-waiting dispatch locks are unavailable'))
+        if not db.features.has_select_for_update and db.vendor != 'sqlite':
+            raise ValidationError(_('Dispatch stock locking is unavailable'))
+
+        def collect_locked_stock() -> dict:
+            """Collect full current rows and validate selected aggregate demand."""
+            stock = {}
+            for item_id in sorted(demand):
+                query = StockItem.objects.using(database).filter(pk=item_id)
+                if db.features.has_select_for_update:
+                    query = query.select_for_update(nowait=True)
+                item = query.first()
+                if item is None or not item.is_in_stock():
+                    raise ValidationError(
+                        _('Selected stock is not available for dispatch')
+                    )
+                if demand[item_id] > item.quantity:
+                    raise ValidationError(
+                        _('Selected demand exceeds current stock quantity')
+                    )
+                stock[item_id] = item
+            return stock
+
+        try:
+            # Roll back the savepoint BEFORE translating expected contention;
+            # otherwise a caught DB error leaves the caller transaction broken.
+            with transaction.atomic(using=database):
+                return collect_locked_stock()
+        except OperationalError as exc:
+            cause = exc.__cause__
+            code = getattr(cause, 'sqlstate', None) or getattr(cause, 'pgcode', None)
+            args = getattr(cause, 'args', ())
+            mysql_nowait = (
+                db.vendor == 'mysql'
+                and args
+                and (
+                    (db.mysql_is_mariadb and args[0] == 1205)
+                    or (not db.mysql_is_mariadb and args[0] == 3572)
+                )
+            )
+            if (db.vendor == 'postgresql' and code == '55P03') or mysql_nowait:
+                raise ValidationError(
+                    _('Selected stock is busy; dispatch was not performed')
+                ) from exc
+            raise
+
     @transaction.atomic
     def complete_allocations(
         self, allocations: QuerySet, user: Optional[User] = None
@@ -2840,7 +2914,8 @@ class SalesOrderShipment(
         customer = order.customer
 
         # Preselect related fields to avoid per-row database queries below
-        allocations = allocations.select_related('line', 'item', 'item__part')
+        allocations = list(allocations.select_related('line', 'item', 'item__part'))
+        current_stock = self._lock_dispatch_stock(allocations)
 
         split_items = []  # (source_item, new_item, quantity) - stock to split off
         shipped_items = []  # (target_item, quantity) - stock to mark as shipped
@@ -2856,7 +2931,10 @@ class SalesOrderShipment(
         allocations_to_update = []
 
         for allocation in allocations:
-            stock_item = seen_stock_items.get(allocation.item_id) or allocation.item
+            stock_item = (
+                seen_stock_items.get(allocation.item_id)
+                or current_stock[allocation.item_id]
+            )
             quantity = allocation.quantity
 
             seen_stock_items[stock_item.pk] = stock_item
@@ -3031,6 +3109,9 @@ class SalesOrderShipment(
 
         # Check if the shipment can be completed (throw error if not)
         self.check_can_complete()
+        # Advisory enqueue-time gate. The worker repeats this against fresh stock
+        # when it executes; a queued task conveys no continuing eligibility.
+        self._lock_dispatch_stock(list(self.allocations.all()))
 
         if tracking_number := kwargs.get('tracking_number'):
             self.tracking_number = tracking_number

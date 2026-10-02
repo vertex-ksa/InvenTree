@@ -2,12 +2,13 @@
 
 import threading
 from datetime import datetime, timedelta
+from decimal import Decimal
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import Sum
 from django.test import TransactionTestCase, skipUnlessDBFeature
 from django.urls import reverse
@@ -279,6 +280,152 @@ class SalesOrderTest(InvenTreeAPITestCase):
         # Both shipped quantities must be counted
         self.line.refresh_from_db()
         self.assertEqual(self.line.shipped, 50)
+
+    def dispatch_effects(self):
+        """Capture real persisted shipment effects, including native queued work."""
+        return {
+            model._meta.label: list(model.objects.order_by('pk').values())
+            for model in (
+                StockItem,
+                StockItemTracking,
+                SalesOrderAllocation,
+                SalesOrderLineItem,
+                SalesOrderShipment,
+                NotificationMessage,
+                OrmQ,
+            )
+        }
+
+    def hold_stock(self, item):
+        """Persist a genuine unavailable status before the effect baseline."""
+        item.refresh_from_db()
+        self.assertTrue(item.set_status(status.StockStatus.QUARANTINED.value))
+        item.save()
+
+    def test_preallocated_quarantine_blocks_direct_partial_dispatch(self):
+        """A preexisting allocation confers no continuing eligibility."""
+        self.allocate_stock(True)
+        self.hold_stock(self.Sa)
+        before = self.dispatch_effects()
+        allocation = self.shipment.allocations.get(item=self.Sa)
+        with self.assertRaises(ValidationError):
+            allocation.complete_allocation(self.user)
+        self.assertEqual(self.dispatch_effects(), before)
+
+    def test_mixed_selected_set_denied_before_any_effect(self):
+        """A later unavailable member prevents earlier available stock writes."""
+        self.allocate_stock(True)
+        self.hold_stock(self.Sb)
+        before = self.dispatch_effects()
+        with self.assertRaises(ValidationError):
+            self.shipment.complete_allocations(
+                self.shipment.allocations.all(), self.user
+            )
+        self.assertEqual(self.dispatch_effects(), before)
+
+    def test_enqueue_hold_blocks_metadata_and_queue(self):
+        """Enqueue-time validation precedes metadata and native offload."""
+        self.allocate_stock(True)
+        self.hold_stock(self.Sa)
+        before = self.dispatch_effects()
+        with self.assertRaises(ValidationError):
+            self.shipment.complete_shipment(
+                self.user, tracking_number='must-not-persist'
+            )
+        self.assertEqual(self.dispatch_effects(), before)
+
+    def test_queued_hold_rechecked_by_real_worker(self):
+        """Native ORM queue admission is not execution-time stock authority."""
+        self.allocate_stock(True)
+        # Only worker liveness routing is controlled: real offload/AsyncTask/ORM
+        # queue and actual worker function are used, with no model substitutes.
+        with mock.patch('InvenTree.status.is_worker_running', return_value=True):
+            task_id = self.shipment.complete_shipment(self.user)
+        self.assertTrue(task_id)
+        queued = [
+            task
+            for task in OrmQ.objects.all()
+            if task.func() == 'order.tasks.complete_sales_order_shipment'
+            and task.args()[:2] == (self.shipment.pk, self.user.pk)
+        ]
+        self.assertEqual(len(queued), 1)
+        self.hold_stock(self.Sa)
+        before = self.dispatch_effects()
+        with self.assertRaises(ValidationError):
+            order.tasks.complete_sales_order_shipment(
+                self.shipment.pk, self.user.pk, None
+            )
+        self.assertEqual(self.dispatch_effects(), before)
+
+    def test_fresh_full_stock_ignores_cached_available_status(self):
+        """Cached quantity/status must not determine dispatch eligibility."""
+        self.allocate_stock(True)
+        cached = list(self.shipment.allocations.select_related('item').order_by('pk'))
+        self.assertTrue(cached[0].item.is_in_stock())
+        current = StockItem.objects.get(pk=cached[0].item_id)
+        self.assertIsNot(current, cached[0].item)
+        self.hold_stock(current)
+        self.assertTrue(cached[0].item.is_in_stock())
+        self.assertFalse(StockItem.objects.get(pk=current.pk).is_in_stock())
+        before = self.dispatch_effects()
+        with transaction.atomic(), self.assertRaises(ValidationError):
+            self.shipment._lock_dispatch_stock(cached)
+        self.assertEqual(self.dispatch_effects(), before)
+
+    def test_grouped_selected_demand_cannot_exceed_fresh_stock(self):
+        """Individually valid requests must not exceed their shared source."""
+        for quantity in (Decimal('20'), Decimal('30')):
+            allocation = SalesOrderAllocation(
+                line=self.line, shipment=self.shipment, item=self.Sa, quantity=quantity
+            )
+            allocation.full_clean()
+            allocation.save()
+        # Native stock save permits this later quantity change. Each allocation
+        # still fits individually, but their selected aggregate no longer fits.
+        self.Sa.refresh_from_db()
+        self.Sa.quantity = Decimal('40')
+        self.Sa.save()
+        before = self.dispatch_effects()
+        with self.assertRaises(ValidationError):
+            self.shipment.complete_allocations(
+                self.shipment.allocations.all(), self.user
+            )
+        self.assertEqual(self.dispatch_effects(), before)
+
+    def test_normal_partial_selected_set_leaves_other_allocation(self):
+        """The compatibility shim remains partial and genuine stock is shipped."""
+        self.allocate_stock(True)
+        other = self.shipment.allocations.get(item=self.Sb)
+        other_before = SalesOrderAllocation.objects.filter(pk=other.pk).values().get()
+        self.shipment.allocations.get(item=self.Sa).complete_allocation(self.user)
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.shipped, Decimal('25'))
+        self.assertEqual(
+            SalesOrderAllocation.objects.filter(pk=other.pk).values().get(),
+            other_before,
+        )
+        self.Sa.refresh_from_db()
+        self.assertEqual(self.Sa.quantity, Decimal('75'))
+
+    def test_normal_grouped_demand_uses_fresh_shared_stock(self):
+        """Actual native split/assignment supports grouped Decimal demand."""
+        self.part.trackable = False
+        self.part.save()
+        for quantity in (Decimal('20.125'), Decimal('29.875')):
+            allocation = SalesOrderAllocation(
+                line=self.line, shipment=self.shipment, item=self.Sa, quantity=quantity
+            )
+            allocation.full_clean()
+            allocation.save()
+        self.shipment.complete_allocations(self.shipment.allocations.all(), self.user)
+        self.line.refresh_from_db()
+        self.Sa.refresh_from_db()
+        self.assertEqual(self.line.shipped, Decimal('50'))
+        self.assertEqual(self.Sa.quantity, Decimal('50'))
+        for allocation in self.shipment.allocations.select_related('item'):
+            self.assertEqual(allocation.item.sales_order_id, self.order.pk)
+            self.assertEqual(allocation.item.customer_id, self.customer.pk)
+            self.assertEqual(allocation.item.quantity, allocation.quantity)
 
     def test_allocate_variant(self):
         """Allocate a variant of the designated item."""
@@ -1320,3 +1467,99 @@ class SalesOrderAllocateStockConcurrencyTest(TransactionTestCase):
 
         self.assertEqual(total_allocated, 5)
         self.assertLessEqual(total_allocated, self.stock_item.quantity)
+
+
+@skipUnlessDBFeature('has_select_for_update_nowait')
+class SalesOrderDispatchStockContentionTest(TransactionTestCase):
+    """Real cross-connection selected-stock contention, not membership proof.
+
+    PostgreSQL execution is required before concurrency acceptance. This source
+    alone does not certify callback, allocation-membership, or line-counter races.
+    """
+
+    fixtures = ['users']
+
+    def test_stock_holder_blocks_dispatch_without_wait_or_effects(self):
+        """A writer holding stock first cannot induce shipment->stock waiting."""
+        customer = Company.objects.create(
+            name='Dispatch lock customer', is_customer=True
+        )
+        part = Part.objects.create(name='Dispatch lock part', salable=True)
+        stock = StockItem.objects.create(part=part, quantity=Decimal('5'))
+        sales_order = SalesOrder.objects.create(
+            customer=customer, reference='SO-DISPATCH-LOCK'
+        )
+        shipment = SalesOrderShipment.objects.create(
+            order=sales_order, reference='LOCK'
+        )
+        line = SalesOrderLineItem.objects.create(
+            order=sales_order, part=part, quantity=Decimal('5')
+        )
+        SalesOrderAllocation.objects.create(
+            line=line, shipment=shipment, item=stock, quantity=Decimal('5')
+        )
+        acquired, release = threading.Event(), threading.Event()
+        errors = []
+
+        def hold_stock_until_released():
+            """Hold the real row transaction until the bounded release signal."""
+            with transaction.atomic():
+                held = StockItem.objects.select_for_update().get(pk=stock.pk)
+                held.set_status(status.StockStatus.QUARANTINED.value)
+                held.save()
+                acquired.set()
+                if not release.wait(5):
+                    raise RuntimeError('Test release deadline exceeded')
+
+        def hold():
+            try:
+                hold_stock_until_released()
+            except Exception as exc:
+                errors.append(exc)
+                acquired.set()
+            finally:
+                connection.close()
+
+        def assert_dispatch_denied_without_effects():
+            """Assert genuine worker denial and all captured persisted effects."""
+
+            def effects():
+                return {
+                    model._meta.label: list(model.objects.order_by('pk').values())
+                    for model in (
+                        StockItem,
+                        StockItemTracking,
+                        SalesOrderAllocation,
+                        SalesOrderLineItem,
+                        SalesOrderShipment,
+                        NotificationMessage,
+                        OrmQ,
+                    )
+                }
+
+            before = effects()
+            with self.assertRaises(ValidationError):
+                order.tasks.complete_sales_order_shipment(shipment.pk, 1, None)
+            self.assertEqual(effects(), before)
+            line.refresh_from_db()
+            shipment.refresh_from_db()
+            self.assertEqual(line.shipped, 0)
+            self.assertIsNone(shipment.shipment_date)
+
+        thread = threading.Thread(target=hold)
+        thread.start()
+        try:
+            self.assertTrue(acquired.wait(5))
+            self.assertEqual(errors, [])
+            assert_dispatch_denied_without_effects()
+        finally:
+            release.set()
+            thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(errors, [])
+        stock.refresh_from_db()
+        self.assertFalse(stock.is_in_stock())
+        # A distinct post-commit denial proves fresh status after contention;
+        # no successful operation is replayed and no held stock is reset.
+        with self.assertRaises(ValidationError):
+            shipment.complete_allocations(shipment.allocations.all())
